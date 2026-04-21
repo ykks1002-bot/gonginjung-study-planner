@@ -46,7 +46,7 @@
     header p  { margin-top: 6px; opacity: .8; font-size: .95rem; }
 
     /* ── Layout ─────────────────────────────────────── */
-    .wrap { max-width: 1200px; margin: 0 auto; padding: 24px 12px 60px; }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
 
     /* ── Steps 1+2 side-by-side on wide screens ─────── */
     .steps-top {
@@ -56,7 +56,7 @@
       margin-bottom: 18px;
     }
     .steps-top .card { margin-bottom: 0; }
-    @media (max-width: 720px) {
+    @media (max-width: 600px) {
       .steps-top { grid-template-columns: 1fr; }
     }
 
@@ -202,11 +202,8 @@
     /* ── Stat cards ─────────────────────────────────── */
     .stat-grid {
       display: grid;
-      grid-template-columns: repeat(7, 1fr);
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
       gap: 12px;
-    }
-    @media (max-width: 720px) {
-      .stat-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
     }
     .stat-item {
       background: var(--gray-50);
@@ -417,7 +414,7 @@
       <div class="opt-group" id="target-group">
         <button class="opt-btn" data-v="1차" onclick="pick(this,'target')">1차</button>
         <button class="opt-btn" data-v="2차" onclick="pick(this,'target')">2차</button>
-        <button class="opt-btn" data-v="1+2차" onclick="pick(this,'target')">1차 + 2차</button>
+        <button class="opt-btn" data-v="1+2차" onclick="pick(this,'target')">동차</button>
       </div>
     </div>
 
