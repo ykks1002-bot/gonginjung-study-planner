@@ -654,6 +654,18 @@ function buildPlan() {
     months.push({ m, sd, ld, sun, lec });
   }
 
+  // 용량이 남을 경우 커리큘럼을 10월까지 고르게 배분
+  // (매달 contentLec = 실제 커리큘럼 진도 단위, lec = 실제 수강 강의수)
+  const effectiveTotal = result
+    .filter(c => c.status !== 'skipped')
+    .reduce((s, c) => s + c.effective, 0);
+  const totalCap = months.reduce((s, mo) => s + mo.lec, 0);
+  const contentRatio = (effectiveTotal > 0 && effectiveTotal < totalCap)
+    ? effectiveTotal / totalCap : 1;
+  months.forEach(mo => {
+    mo.contentLec = Math.max(1, Math.round(mo.lec * contentRatio));
+  });
+
   return { totalDays, lecDays, capacity, totalNeeded, coveragePct, fullCount, result, months, lpd };
 }
 
@@ -850,9 +862,9 @@ function renderMonthly(p) {
   let globalPos = 0;
   let html = '';
 
-  months.forEach(({ m, sd, ld, sun, lec }) => {
+  months.forEach(({ m, sd, ld, sun, lec, contentLec }) => {
     const mStart = globalPos;
-    const mEnd   = globalPos + lec;
+    const mEnd   = globalPos + contentLec;
 
     // 이번 달에 해당하는 커리큘럼 계산
     let localPos = 0;
@@ -862,7 +874,7 @@ function renderMonthly(p) {
       const cE = localPos + a.lec;
       if (cE > mStart && cS < mEnd) {
         const ov  = Math.min(cE, mEnd) - Math.max(cS, mStart);
-        const pct = Math.round(ov / lec * 100);
+        const pct = Math.round(ov / contentLec * 100);
         items.push({ name: a.name, pct });
       }
       localPos += a.lec;
@@ -899,7 +911,7 @@ function renderMonthly(p) {
     }
 
     html += `</div></div>`;
-    globalPos += lec;
+    globalPos += contentLec;
   });
 
   document.getElementById('mo-grid').innerHTML = html;
