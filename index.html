@@ -886,7 +886,7 @@ function renderMonthly(p) {
     const mainCurr = items.length > 0 ? items.reduce((a, b) => a.pct >= b.pct ? a : b) : null;
     const mainTag  = mainCurr
       ? `<span style="font-size:.7rem;background:rgba(255,255,255,.25);padding:2px 8px;
-           border-radius:10px;margin-left:6px;">${mainCurr.name}</span>` : '';
+           border-radius:10px;margin-left:6px;">${mainCurr.name.replace(/<br>/g, ' ')}</span>` : '';
 
     html += `<div class="mo-card">
       <div class="${isExam ? 'mo-head exam-head' : 'mo-head'}">
@@ -902,7 +902,7 @@ function renderMonthly(p) {
     if (items.length > 0) {
       items.forEach(it => {
         html += `<div class="mo-item">
-          <div class="mo-item-label"><span>${it.name}</span><span>${it.pct}%</span></div>
+          <div class="mo-item-label"><span>${it.name.replace(/<br>/g, ' ')}</span><span>${it.pct}%</span></div>
           <div class="pb-bg"><div class="pb" style="width:${it.pct}%"></div></div>
         </div>`;
       });
