@@ -646,7 +646,7 @@ function buildPlan() {
   const result = CURRS.map(orig => sorted.find(c => c.seq === orig.seq));
 
   const coveragePct = Math.min(100, Math.round(capacity / totalNeeded * 100));
-  const fullCount   = result.filter(c => c.status === 'full').length;
+  const fullCount   = result.filter(c => c.status === 'full' || c.status === 'partial').length;
 
   // 월별 데이터 (시작월 ~ 10월)
   const months = [];
@@ -686,11 +686,11 @@ function renderStats(p) {
   document.getElementById('stat-grid').innerHTML = [
     { val: totalDays + '일',      lbl: '총 학습 기간'       },
     { val: hDisp,                 lbl: '하루 학습 시간'      },
-    { val: '약 ' + S.hours + '강', lbl: '하루 수강 강의수'   },
-    { val: capacity + '강',          lbl: '수강 가능 총 강의'   },
-    { val: totalNeeded + '강',       lbl: '전체 커리큘럼 강의'  },
-    { val: coveragePct + '%',        lbl: '커리큘럼 커버율'     },
-    { val: fullCount + '/7',         lbl: '완주 가능 과정 수'   },
+    { val: '약 ' + S.hours + '강', lbl: '하루 수강<br>강의수'   },
+    { val: capacity + '강',          lbl: '수강 가능<br>총 강의'  },
+    { val: totalNeeded + '강',       lbl: '전체 커리큘럼 강의'   },
+    { val: coveragePct + '%',        lbl: '커리큘럼<br>커버율'   },
+    { val: fullCount + '/7',         lbl: '완주 가능<br>과정수'  },
   ].map(s =>
     `<div class="stat-item"><div class="val">${s.val}</div><div class="lbl">${s.lbl}</div></div>`
   ).join('');
