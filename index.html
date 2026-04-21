@@ -478,8 +478,8 @@ const TODAY     = new Date(2026, 3, 21);   // Apr 21 2026
 const CURRS = [
   { seq:1, name:'기초이론',          pri:7, l1:56,  l2:91  },
   { seq:2, name:'기본이론',          pri:2, l1:80,  l2:146 },
-  { seq:3, name:'핵심이론&기출문제',  pri:1, l1:80,  l2:132 },
-  { seq:4, name:'기출변형문제풀이',   pri:6, l1:64,  l2:98  },
+  { seq:3, name:'핵심이론&<br>기출문제',  pri:1, l1:80,  l2:132 },
+  { seq:4, name:'기출변형<br>문제풀이',   pri:6, l1:64,  l2:98  },
   { seq:5, name:'단원별모의고사',     pri:5, l1:24,  l2:44  },
   { seq:6, name:'압축끝장100선',      pri:3, l1:16,  l2:29  },
   { seq:7, name:'동형모의고사',       pri:4, l1:24,  l2:40  },
@@ -748,7 +748,7 @@ function renderCurriculum(p) {
   let skipHtml = '';
   if (skipped.length > 0) {
     skipHtml = `<div class="skip-note">
-      ⏭️ <strong>생략 과정 (시간 부족):</strong> ${skipped.map(c => c.name).join(', ')}<br>
+      ⏭️ <strong>생략 과정 (시간 부족):</strong> ${skipped.map(c => c.name.replace(/<br>/g, ' ')).join(', ')}<br>
       학습 시작 월을 앞당기거나 하루 학습 시간을 늘리면 추가로 포함됩니다.
     </div>`;
   }
