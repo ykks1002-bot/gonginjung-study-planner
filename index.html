@@ -105,32 +105,36 @@
       font-size: .78rem; font-weight: 800; flex-shrink: 0;
     }
 
-    /* ── Option buttons (target / hours) ────────────── */
-    .opt-group { display: flex; flex-wrap: wrap; gap: 10px; }
+    /* ── Option buttons (target) ─────────────────────── */
+    .opt-group {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    @media (max-width: 400px) { .opt-group { grid-template-columns: 1fr; } }
     .opt-btn {
-      padding: 10px 18px;
+      padding: 14px 10px;
       border: 2px solid var(--gray-200);
       border-radius: 9px;
       background: #fff;
       color: var(--gray-700);
       cursor: pointer;
-      font-size: .9rem;
-      font-weight: 600;
-      line-height: 1.4;
+      font-size: .95rem;
+      font-weight: 700;
       text-align: center;
       transition: border-color .15s, background .15s, color .15s;
     }
     .opt-btn:hover   { border-color: var(--blue); color: var(--blue); }
     .opt-btn.active  { border-color: var(--blue); background: var(--blue); color: #fff; }
-    .opt-btn small   { display: block; font-weight: 400; font-size: .72rem; margin-top: 2px; opacity: .85; }
 
     /* ── Hours button grid (체크박스형) ─────────────── */
     .hours-group {
       display: grid;
-      grid-template-columns: repeat(6, minmax(60px, 140px));
+      grid-template-columns: repeat(8, minmax(56px, 120px));
       gap: 8px;
     }
-    @media (max-width: 480px) { .hours-group { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 600px) { .hours-group { grid-template-columns: repeat(4, 1fr); } }
+    @media (max-width: 360px) { .hours-group { grid-template-columns: repeat(2, 1fr); } }
     .hours-btn {
       padding: 12px 6px;
       border: 2px solid var(--gray-200);
@@ -411,15 +415,9 @@
     <div class="card">
       <h2><span class="step-num">1</span>시험 목표 선택</h2>
       <div class="opt-group" id="target-group">
-        <button class="opt-btn" data-v="1차" onclick="pick(this,'target')">
-          1차<small>부동산학개론·민법및민사특별법</small>
-        </button>
-        <button class="opt-btn" data-v="2차" onclick="pick(this,'target')">
-          2차<small>공인중개사법·부동산공법·공시법·세법</small>
-        </button>
-        <button class="opt-btn" data-v="1+2차" onclick="pick(this,'target')">
-          1차 + 2차<small>전 6과목 완주</small>
-        </button>
+        <button class="opt-btn" data-v="1차" onclick="pick(this,'target')">1차</button>
+        <button class="opt-btn" data-v="2차" onclick="pick(this,'target')">2차</button>
+        <button class="opt-btn" data-v="1+2차" onclick="pick(this,'target')">1차 + 2차</button>
       </div>
     </div>
 
@@ -536,21 +534,23 @@ const S = { target: null, month: null, hours: null };
     monthGrid.appendChild(btn);
   });
 
-  // Hours buttons: 3h ~ 8h (체크박스형)
+  // Hours buttons: 2h ~ 8h+ (체크박스형)
   const hoursGroup = document.getElementById('hours-group');
   const hoursData = [
-    { h:3, sub:'최소' },
-    { h:4, sub:''     },
-    { h:5, sub:''     },
-    { h:6, sub:''     },
-    { h:7, sub:''     },
-    { h:8, sub:'최대' },
+    { h:2, lbl:'2시간', sub:'최소' },
+    { h:3, lbl:'3시간', sub:''     },
+    { h:4, lbl:'4시간', sub:''     },
+    { h:5, lbl:'5시간', sub:''     },
+    { h:6, lbl:'6시간', sub:''     },
+    { h:7, lbl:'7시간', sub:''     },
+    { h:8, lbl:'8시간', sub:''     },
+    { h:9, lbl:'8시간+', sub:'이상' },
   ];
-  hoursData.forEach(({ h, sub }) => {
+  hoursData.forEach(({ h, lbl, sub }) => {
     const btn = document.createElement('button');
     btn.className = 'hours-btn';
     btn.dataset.v = h;
-    btn.innerHTML = `${h}시간<span class="sub">${sub || '&nbsp;'}</span>`;
+    btn.innerHTML = `${lbl}<span class="sub">${sub || '&nbsp;'}</span>`;
     btn.onclick = () => pickHours(btn, h);
     hoursGroup.appendChild(btn);
   });
@@ -682,10 +682,11 @@ function generate() {
 /* ── Stats ──────────────────────────────────── */
 function renderStats(p) {
   const { totalDays, capacity, totalNeeded, coveragePct, fullCount } = p;
+  const hDisp = S.hours >= 9 ? '8h+' : S.hours + 'h';
   document.getElementById('stat-grid').innerHTML = [
-    { val: totalDays + '일',         lbl: '총 학습 기간'       },
-    { val: S.hours + 'h',            lbl: '하루 학습 시간'      },
-    { val: '약 ' + S.hours + '강',   lbl: '하루 수강 강의수'   },
+    { val: totalDays + '일',      lbl: '총 학습 기간'       },
+    { val: hDisp,                 lbl: '하루 학습 시간'      },
+    { val: '약 ' + S.hours + '강', lbl: '하루 수강 강의수'   },
     { val: capacity + '강',          lbl: '수강 가능 총 강의'   },
     { val: totalNeeded + '강',       lbl: '전체 커리큘럼 강의'  },
     { val: coveragePct + '%',        lbl: '커리큘럼 커버율'     },
