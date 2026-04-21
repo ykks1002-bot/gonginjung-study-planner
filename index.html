@@ -202,11 +202,11 @@
     /* ── Stat cards ─────────────────────────────────── */
     .stat-grid {
       display: grid;
-      grid-template-columns: repeat(7, 1fr);
+      grid-template-columns: repeat(6, 1fr);
       gap: 10px;
     }
     @media (max-width: 500px) {
-      .stat-grid { grid-template-columns: repeat(4, 1fr); }
+      .stat-grid { grid-template-columns: repeat(3, 1fr); }
     }
     .stat-item {
       background: var(--gray-50);
@@ -447,10 +447,6 @@
     <div class="card">
       <div class="results-header">📊 나의 학습 현황</div>
       <div class="stat-grid" id="stat-grid"></div>
-      <div class="coverage-wrap">
-        <div class="coverage-label" id="cov-label"></div>
-        <div class="bar-bg"><div class="bar-fill" id="cov-bar" style="width:0%"></div></div>
-      </div>
     </div>
 
     <!-- Curriculum roadmap -->
@@ -689,15 +685,11 @@ function renderStats(p) {
     { val: '약 ' + S.hours + '강', lbl: '하루 수강<br>강의수'   },
     { val: capacity + '강',          lbl: '수강 가능<br>총 강의'  },
     { val: totalNeeded + '강',       lbl: '전체 커리큘럼 강의'   },
-    { val: coveragePct + '%',        lbl: '커리큘럼<br>커버율'   },
     { val: fullCount + '/7',         lbl: '완주 가능<br>과정수'  },
   ].map(s =>
     `<div class="stat-item"><div class="val">${s.val}</div><div class="lbl">${s.lbl}</div></div>`
   ).join('');
 
-  document.getElementById('cov-label').textContent =
-    `전체 ${totalNeeded}강 중 ${Math.min(capacity, totalNeeded)}강 수강 가능 (${coveragePct}%)`;
-  document.getElementById('cov-bar').style.width = coveragePct + '%';
 }
 
 /* ── Curriculum roadmap ─────────────────────── */
