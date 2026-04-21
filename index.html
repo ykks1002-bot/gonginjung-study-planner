@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>공인중개사 학습계획 플래너</title>
+  <style>
+    :root {
+      --blue: #2563eb;
+      --blue-dark: #1d4ed8;
+      --blue-light: #eff6ff;
+      --amber: #f59e0b;
+      --green: #10b981;
+      --red: #ef4444;
+      --purple: #7c3aed;
+      --gray-50: #f8fafc;
+      --gray-100: #f1f5f9;
+      --gray-200: #e2e8f0;
+      --gray-400: #94a3b8;
+      --gray-500: #64748b;
+      --gray-700: #334155;
+      --gray-900: #0f172a;
+      --radius: 12px;
+      --shadow: 0 1px 4px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo',
+                   'Noto Sans KR', sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-900);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* ── Header ─────────────────────────────────────── */
+    header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+      color: #fff;
+      padding: 28px 20px 24px;
+      text-align: center;
+    }
+    header h1 { font-size: clamp(1.4rem, 4vw, 2rem); font-weight: 800; letter-spacing: -.5px; }
+    header p  { margin-top: 6px; opacity: .8; font-size: .95rem; }
+
+    /* ── Layout ─────────────────────────────────────── */
+    .wrap { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
+
+    /* ── Info banner ────────────────────────────────── */
+    .exam-banner {
+      background: linear-gradient(135deg, #1e40af, #3b82f6);
+      color: #fff;
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .exam-banner .main-date { font-size: clamp(1rem, 3vw, 1.25rem); font-weight: 700; }
+    .exam-banner .sub       { font-size: .8rem; opacity: .75; margin-bottom: 4px; }
+    .exam-banner .dday      { margin-top: 14px; font-size: .9rem; opacity: .9;
+                               width: 100%; border-top: 1px solid rgba(255,255,255,.2);
+                               padding-top: 12px; }
+
+    /* ── Card ───────────────────────────────────────── */
+    .card {
+      background: #fff;
+      border-radius: var(--radius);
+      padding: 22px 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 18px;
+    }
+    .card h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--blue);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .step-num {
+      background: var(--blue);
+      color: #fff;
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: .78rem; font-weight: 800; flex-shrink: 0;
+    }
+
+    /* ── Option buttons (target / hours) ────────────── */
+    .opt-group { display: flex; flex-wrap: wrap; gap: 10px; }
+    .opt-btn {
+      padding: 10px 18px;
+      border: 2px solid var(--gray-200);
+      border-radius: 9px;
+      background: #fff;
+      color: var(--gray-700);
+      cursor: pointer;
+      font-size: .9rem;
+      font-weight: 600;
+      line-height: 1.4;
+      text-align: center;
+      transition: border-color .15s, background .15s, color .15s;
+    }
+    .opt-btn:hover   { border-color: var(--blue); color: var(--blue); }
+    .opt-btn.active  { border-color: var(--blue); background: var(--blue); color: #fff; }
+    .opt-btn small   { display: block; font-weight: 400; font-size: .72rem; margin-top: 2px; opacity: .85; }
+
+    /* ── Hours button grid (체크박스형) ─────────────── */
+    .hours-group {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+    }
+    @media (max-width: 480px) { .hours-group { grid-template-columns: repeat(3, 1fr); } }
+    .hours-btn {
+      padding: 12px 6px;
+      border: 2px solid var(--gray-200);
+      border-radius: 9px;
+      background: #fff;
+      color: var(--gray-700);
+      cursor: pointer;
+      font-size: .95rem;
+      font-weight: 700;
+      text-align: center;
+      transition: border-color .15s, background .15s, color .15s;
+    }
+    .hours-btn .sub  { font-size: .65rem; font-weight: 400; display: block; margin-top: 2px; color: var(--gray-400); }
+    .hours-btn:hover { border-color: var(--blue); color: var(--blue); }
+    .hours-btn.active { border-color: var(--blue); background: var(--blue); color: #fff; }
+    .hours-btn.active .sub { color: rgba(255,255,255,.8); }
+
+    /* ── Month grid ─────────────────────────────────── */
+    .month-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    @media (max-width: 480px) { .month-grid { grid-template-columns: repeat(4, 1fr); } }
+    .month-btn {
+      padding: 10px 6px;
+      border: 2px solid var(--gray-200);
+      border-radius: 9px;
+      background: #fff;
+      color: var(--gray-700);
+      cursor: pointer;
+      font-size: .88rem;
+      font-weight: 600;
+      text-align: center;
+      transition: border-color .15s, background .15s, color .15s;
+    }
+    .month-btn:hover  { border-color: var(--blue); color: var(--blue); }
+    .month-btn.active { border-color: var(--blue); background: var(--blue); color: #fff; }
+    .month-btn .sub   { font-size: .65rem; font-weight: 400; display: block; margin-top: 2px; opacity: .8; }
+
+    /* ── Hours hint ─────────────────────────────────── */
+    .hours-hint  { margin-top: 12px; font-size: .84rem; padding: 8px 12px; border-radius: 8px; }
+    .hours-hint.ok   { background: #f0fdf4; color: #15803d; }
+    .hours-hint.warn { background: #fffbeb; color: #b45309; }
+
+    /* ── Generate button ────────────────────────────── */
+    .btn-gen {
+      width: 100%; padding: 16px;
+      background: var(--blue);
+      color: #fff;
+      border: none; border-radius: var(--radius);
+      font-size: 1.05rem; font-weight: 700;
+      cursor: pointer; letter-spacing: .3px;
+      transition: background .15s, transform .1s;
+      margin-bottom: 32px;
+    }
+    .btn-gen:hover   { background: var(--blue-dark); }
+    .btn-gen:active  { transform: scale(.98); }
+    .btn-gen:disabled { background: var(--gray-400); cursor: not-allowed; transform: none; }
+
+    /* ── Results header ─────────────────────────────── */
+    .results-header {
+      font-size: 1.1rem; font-weight: 700; color: var(--gray-700);
+      margin-bottom: 16px; padding-bottom: 10px;
+      border-bottom: 2px solid var(--gray-200);
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    /* ── Stat cards ─────────────────────────────────── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 12px;
+    }
+    .stat-item {
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: 10px;
+      padding: 14px 12px;
+      text-align: center;
+    }
+    .stat-item .val  { font-size: 1.7rem; font-weight: 800; color: var(--blue); }
+    .stat-item .lbl  { font-size: .72rem; color: var(--gray-500); margin-top: 3px; }
+
+    /* ── Coverage bar ────────────────────────────────── */
+    .coverage-wrap {
+      margin-top: 18px; padding: 14px 16px;
+      background: var(--blue-light); border-radius: 10px;
+      border: 1px solid #bfdbfe;
+    }
+    .coverage-label { font-size: .88rem; color: #1e40af; font-weight: 600; margin-bottom: 8px; }
+    .bar-bg { background: #bfdbfe; border-radius: 4px; height: 10px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; background: var(--blue); transition: width .6s; }
+
+    /* ── Curriculum roadmap (7-column grid, no scroll) ─ */
+    .rm-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .rm-cell {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: space-between;
+      padding: 10px 5px 8px;
+      border-radius: 10px; border: 2px solid var(--gray-200);
+      text-align: center; gap: 4px;
+      background: var(--gray-100);
+      position: relative;
+    }
+    .rm-cell.included { border-color: var(--blue);  background: var(--blue-light); }
+    .rm-cell.partial  { border-color: var(--amber); background: #fffbeb; }
+    .rm-cell.skipped  { opacity: .4; }
+    /* 셀 사이 화살표 (CSS ::after, 가운데 정렬) */
+    .rm-cell:not(:last-child)::after {
+      content: '›';
+      position: absolute;
+      right: -10px; top: 50%;
+      transform: translateY(-50%);
+      width: 14px; text-align: center;
+      font-size: 1.3rem; font-weight: 700; line-height: 1;
+      color: var(--gray-300); z-index: 2; pointer-events: none;
+    }
+    .rm-cell.included:not(:last-child)::after { color: var(--blue); }
+    .rm-cell.partial:not(:last-child)::after  { color: var(--amber); }
+    .rm-seq  { font-size: .6rem; font-weight: 800; color: var(--gray-400); }
+    .rm-cell.included .rm-seq { color: var(--blue); }
+    .rm-cell.partial  .rm-seq { color: #b45309; }
+    .rm-name { font-size: .7rem; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; width: 100%; }
+    .rm-cnt  { font-size: .62rem; color: var(--gray-500); }
+    .rm-icon { font-size: .88rem; }
+    .rm-stlbl { font-size: .62rem; font-weight: 700; }
+    /* 모바일: 4열 → 화살표 숨김 */
+    @media (max-width: 620px) {
+      .rm-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+      .rm-cell::after { display: none; }
+    }
+    @media (max-width: 380px) {
+      .rm-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ── Study path summary ─────────────────────────── */
+    .study-path {
+      margin-top: 16px; padding: 14px 16px;
+      background: #f0fdf4; border: 1px solid #86efac; border-radius: 10px;
+    }
+    .study-path .sp-label {
+      font-size: .82rem; font-weight: 700; color: #15803d; margin-bottom: 10px;
+    }
+    .sp-items {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+    }
+    .sp-tag {
+      background: #dcfce7; color: #166534;
+      padding: 5px 12px; border-radius: 20px;
+      font-size: .82rem; font-weight: 700;
+      display: flex; flex-direction: column; align-items: center; gap: 1px;
+    }
+    .sp-tag .sp-lec { font-size: .65rem; font-weight: 400; opacity: .8; }
+    .sp-tag.partial-tag { background: #fef3c7; color: #92400e; }
+    .sp-arr { color: #16a34a; font-weight: 700; font-size: 1rem; }
+
+    /* ── Skip note ──────────────────────────────────── */
+    .skip-note {
+      margin-top: 10px; padding: 10px 14px;
+      background: var(--gray-50); border: 1px solid var(--gray-200);
+      border-radius: 8px; font-size: .8rem; color: var(--gray-500);
+    }
+
+    /* ── Weekly table ────────────────────────────────── */
+    .week-scroll { overflow-x: auto; }
+    table.week { width: 100%; border-collapse: collapse; font-size: .83rem; }
+    table.week th {
+      background: var(--blue); color: #fff;
+      padding: 9px 6px; text-align: center;
+      font-weight: 700;
+    }
+    table.week th:first-child { background: #1e3a8a; }
+    table.week th.sun-th { background: #5b21b6; }
+    table.week td {
+      padding: 10px 6px; text-align: center;
+      border: 1px solid var(--gray-200);
+    }
+    table.week td.sun-td { background: #f5f3ff; }
+    table.week tr:nth-child(even) td { background: var(--gray-50); }
+    table.week tr:nth-child(even) td.sun-td { background: #ede9fe; }
+    .stag {
+      display: inline-block; padding: 3px 8px; border-radius: 20px;
+      font-size: .72rem; font-weight: 700; white-space: nowrap;
+    }
+    .s0  { background: #dbeafe; color: #1d4ed8; }
+    .s1  { background: #fce7f3; color: #9d174d; }
+    .s2  { background: #dcfce7; color: #166534; }
+    .s3  { background: #fef3c7; color: #92400e; }
+    .s4  { background: #ede9fe; color: #6b21a8; }
+    .s5  { background: #ffedd5; color: #c2410c; }
+    .sun-1 { background: #fef3c7; color: #92400e; }
+    .sun-2 { background: #ede9fe; color: #6b21a8; }
+    .week-note {
+      margin-top: 10px; font-size: .8rem; color: var(--gray-500);
+      background: var(--gray-50); border-radius: 8px; padding: 8px 12px;
+    }
+    .sun-phase-box {
+      margin-top: 10px; padding: 10px 14px;
+      background: #faf5ff; border: 1px solid #ddd6fe;
+      border-radius: 8px; font-size: .82rem;
+    }
+    .sun-phase-box strong { color: var(--purple); }
+    .phase-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .phase-tag  { padding: 3px 10px; border-radius: 12px; font-size: .78rem; font-weight: 600; }
+    .phase-tag-1 { background: #fef3c7; color: #92400e; }
+    .phase-tag-2 { background: #ede9fe; color: #6b21a8; }
+
+    /* ── Monthly grid ────────────────────────────────── */
+    .mo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 14px;
+    }
+    .mo-card { border: 1px solid var(--gray-200); border-radius: 10px; overflow: hidden; }
+    .mo-head {
+      background: var(--blue); color: #fff;
+      padding: 9px 14px; font-weight: 700; font-size: .9rem;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .mo-head.exam-head { background: var(--red); }
+    .mo-body { padding: 12px 14px; }
+    .mo-meta { font-size: .76rem; color: var(--gray-500); margin-bottom: 4px; }
+    .mo-sun  { font-size: .72rem; margin-bottom: 8px; }
+    .mo-sun.phase1 { color: #92400e; }
+    .mo-sun.phase2 { color: #6b21a8; }
+    .mo-item { margin-top: 7px; }
+    .mo-item-label {
+      display: flex; justify-content: space-between;
+      font-size: .8rem; margin-bottom: 3px;
+    }
+    .mo-item-label span:last-child { color: var(--blue); font-weight: 700; }
+    .pb-bg { background: var(--gray-200); border-radius: 3px; height: 6px; overflow: hidden; }
+    .pb { height: 100%; border-radius: 3px; background: var(--blue); }
+    .mo-done { color: var(--green); font-weight: 600; font-size: .83rem; }
+
+    /* ── Hidden ─────────────────────────────────────── */
+    #results { display: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>공인중개사 학습계획 플래너</h1>
+  <p>나에게 맞는 최적의 학습계획을 자동으로 설계해 드립니다</p>
+</header>
+
+<div class="wrap">
+
+  <!-- Exam info banner -->
+  <div class="exam-banner">
+    <div>
+      <div class="sub">2026년 제37회 공인중개사 시험</div>
+      <div class="main-date">시험일&nbsp; 2026년 10월 31일 (토)</div>
+    </div>
+    <div style="text-align:right;">
+      <div class="sub">원서접수</div>
+      <div style="font-weight:600;">2026.08.03 ~ 08.07</div>
+    </div>
+    <div class="dday" id="dday-text"></div>
+  </div>
+
+  <!-- Step 1 -->
+  <div class="card">
+    <h2><span class="step-num">1</span>시험 목표 선택</h2>
+    <div class="opt-group" id="target-group">
+      <button class="opt-btn" data-v="1차" onclick="pick(this,'target')">
+        1차<small>부동산학개론·민법및민사특별법</small>
+      </button>
+      <button class="opt-btn" data-v="2차" onclick="pick(this,'target')">
+        2차<small>공인중개사법·부동산공법·공시법·세법</small>
+      </button>
+      <button class="opt-btn" data-v="1+2차" onclick="pick(this,'target')">
+        1차 + 2차<small>전 6과목 완주</small>
+      </button>
+    </div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="card">
+    <h2><span class="step-num">2</span>학습 시작 월 선택</h2>
+    <div class="month-grid" id="month-grid"></div>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="card">
+    <h2><span class="step-num">3</span>하루 학습 가능 시간 선택</h2>
+    <div class="hours-group" id="hours-group"></div>
+    <div id="hours-hint" class="hours-hint" style="display:none;"></div>
+  </div>
+
+  <!-- Generate -->
+  <button class="btn-gen" id="gen-btn" onclick="generate()">
+    학습계획 생성하기 →
+  </button>
+
+  <!-- Results -->
+  <div id="results">
+
+    <!-- Summary -->
+    <div class="card">
+      <div class="results-header">📊 나의 학습 현황</div>
+      <div class="stat-grid" id="stat-grid"></div>
+      <div class="coverage-wrap">
+        <div class="coverage-label" id="cov-label"></div>
+        <div class="bar-bg"><div class="bar-fill" id="cov-bar" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <!-- Curriculum roadmap -->
+    <div class="card">
+      <div class="results-header">📚 커리큘럼 학습 로드맵</div>
+      <div id="curr-roadmap"></div>
+    </div>
+
+    <!-- Weekly -->
+    <div class="card">
+      <div class="results-header">📅 주간 학습 스케줄</div>
+      <div id="week-table"></div>
+    </div>
+
+    <!-- Monthly -->
+    <div class="card">
+      <div class="results-header">🗓️ 월별 학습 진도</div>
+      <div class="mo-grid" id="mo-grid"></div>
+    </div>
+
+  </div><!-- /results -->
+</div><!-- /wrap -->
+
+<script>
+/* ═══════════════════ DATA ═══════════════════ */
+const EXAM_DATE = new Date(2026, 9, 31);   // Oct 31 2026
+const TODAY     = new Date(2026, 3, 21);   // Apr 21 2026
+
+const CURRS = [
+  { seq:1, name:'기초이론',          pri:7, l1:56,  l2:91  },
+  { seq:2, name:'기본이론',          pri:2, l1:80,  l2:146 },
+  { seq:3, name:'핵심이론&기출문제',  pri:1, l1:80,  l2:132 },
+  { seq:4, name:'기출변형문제풀이',   pri:6, l1:64,  l2:98  },
+  { seq:5, name:'단원별모의고사',     pri:5, l1:24,  l2:44  },
+  { seq:6, name:'압축끝장100선',      pri:3, l1:16,  l2:29  },
+  { seq:7, name:'동형모의고사',       pri:4, l1:24,  l2:40  },
+];
+
+const SUBJECTS = {
+  '1차':   ['부동산학개론', '민법및민사특별법'],
+  '2차':   ['공인중개사법령및실무', '부동산공법', '부동산공시법령', '부동산세법'],
+  '1+2차': ['부동산학개론', '민법및민사특별법', '공인중개사법령및실무', '부동산공법', '부동산공시법령', '부동산세법'],
+};
+const REC_HOURS = { '1차': 3, '2차': 4, '1+2차': 6 };
+const SHORT = {
+  '부동산학개론':        '부동산학개론',
+  '민법및민사특별법':    '민법',
+  '공인중개사법령및실무':'공인중개사법',
+  '부동산공법':          '부동산공법',
+  '부동산공시법령':      '공시법령',
+  '부동산세법':          '부동산세법',
+};
+
+/* ═══════════════════ STATE ═══════════════════ */
+const S = { target: null, month: null, hours: null };
+
+/* ═══════════════════ INIT ════════════════════ */
+(function init() {
+  // D-day
+  const diff = Math.ceil((EXAM_DATE - TODAY) / 864e5);
+  document.getElementById('dday-text').textContent = `오늘부터 시험까지 D-${diff}일 남았습니다`;
+
+  // Month buttons: 1월 ~ 8월
+  const monthGrid = document.getElementById('month-grid');
+  const monthData = [
+    { m:1, lbl:'1월', sub:'10개월 전' },
+    { m:2, lbl:'2월', sub:'9개월 전'  },
+    { m:3, lbl:'3월', sub:'8개월 전'  },
+    { m:4, lbl:'4월', sub:'7개월 전'  },
+    { m:5, lbl:'5월', sub:'6개월 전'  },
+    { m:6, lbl:'6월', sub:'5개월 전'  },
+    { m:7, lbl:'7월', sub:'4개월 전'  },
+    { m:8, lbl:'8월', sub:'원서접수'  },
+  ];
+  monthData.forEach(({ m, lbl, sub }) => {
+    const btn = document.createElement('button');
+    btn.className = 'month-btn';
+    btn.dataset.v = m;
+    btn.innerHTML = lbl + `<span class="sub">${sub}</span>`;
+    btn.onclick = () => pickMonth(btn, m);
+    monthGrid.appendChild(btn);
+  });
+
+  // Hours buttons: 3h ~ 8h (체크박스형)
+  const hoursGroup = document.getElementById('hours-group');
+  const hoursData = [
+    { h:3, sub:'최소' },
+    { h:4, sub:''     },
+    { h:5, sub:''     },
+    { h:6, sub:''     },
+    { h:7, sub:''     },
+    { h:8, sub:'최대' },
+  ];
+  hoursData.forEach(({ h, sub }) => {
+    const btn = document.createElement('button');
+    btn.className = 'hours-btn';
+    btn.dataset.v = h;
+    btn.innerHTML = `${h}시간<span class="sub">${sub || '&nbsp;'}</span>`;
+    btn.onclick = () => pickHours(btn, h);
+    hoursGroup.appendChild(btn);
+  });
+})();
+
+/* ═══════════════════ UI helpers ══════════════ */
+function pick(btn, key) {
+  btn.closest('.opt-group').querySelectorAll('.opt-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  S[key] = btn.dataset.v;
+  updateHoursHint();
+}
+
+function pickMonth(btn, m) {
+  document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  S.month = m;
+}
+
+function pickHours(btn, h) {
+  document.querySelectorAll('.hours-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  S.hours = h;
+  updateHoursHint();
+}
+
+function updateHoursHint() {
+  if (!S.target || !S.hours) return;
+  const hint = document.getElementById('hours-hint');
+  const rec  = REC_HOURS[S.target];
+  hint.style.display = '';
+  if (S.hours < rec) {
+    hint.className = 'hours-hint warn';
+    hint.textContent = `⚠️ ${S.target} 목표의 권장 학습 시간은 하루 ${rec}시간입니다. 조금 더 늘리면 커버율이 높아집니다.`;
+  } else {
+    hint.className = 'hours-hint ok';
+    hint.textContent = `✅ ${S.target} 목표 권장 시간(${rec}시간) 이상입니다. 좋습니다!`;
+  }
+}
+
+/* ═══════════════════ CALC ════════════════════ */
+// 1강 ≈ 60분 → 하루 N시간 = 약 N강 (학습 시간을 넘지 않음)
+function lecturesPerDay(h) { return h; }
+
+// 한 달의 전체 날수 (일요일 포함, 모든 날 학습)
+function allDaysInMonth(month) {
+  return new Date(2026, month, 0).getDate();
+}
+
+// 한 달의 강의 수강 가능일 (월~토, 일요일 제외)
+function lectureDaysInMonth(month) {
+  return Math.round(allDaysInMonth(month) * 6 / 7);
+}
+
+function getLecturesForTarget(c, target) {
+  if (target === '1차')  return c.l1;
+  if (target === '2차')  return c.l2;
+  return c.l1 + c.l2;
+}
+
+function buildPlan() {
+  const startDate   = new Date(2026, S.month - 1, 1);
+  const totalDays   = Math.ceil((EXAM_DATE - startDate) / 864e5);
+  const lpd         = lecturesPerDay(S.hours);
+
+  // 강의 수강은 월~토 (6일/주), 일요일은 복습
+  const lecDays  = Math.round(totalDays * 6 / 7);
+  const capacity = lecDays * lpd;
+
+  const totalNeeded = CURRS.reduce((s, c) => s + getLecturesForTarget(c, S.target), 0);
+
+  // 우선순위 기준으로 커리큘럼 포함 여부 결정
+  const sorted = CURRS.map(c => ({
+    ...c,
+    needed: getLecturesForTarget(c, S.target),
+  })).sort((a, b) => a.pri - b.pri);
+
+  let rem = capacity;
+  sorted.forEach(c => {
+    if (rem >= c.needed) {
+      // 100% 완주 가능
+      c.status = 'full'; c.effective = c.needed; rem -= c.needed;
+    } else if (rem * 2 >= c.needed) {
+      // 50% 이상 수강 가능 → partial 포함, 잔여 용량 소진
+      c.status = 'partial'; c.effective = rem; c.pct = Math.round(rem / c.needed * 100); rem = 0;
+    } else {
+      // 50% 미만 → 제외하고 잔여 용량으로 다음 커리큘럼 시도
+      c.status = 'skipped'; c.effective = 0;
+    }
+  });
+
+  // 커리큘럼 순서(seq) 기준으로 복원
+  const result = CURRS.map(orig => sorted.find(c => c.seq === orig.seq));
+
+  const coveragePct = Math.min(100, Math.round(capacity / totalNeeded * 100));
+  const fullCount   = result.filter(c => c.status === 'full').length;
+
+  // 월별 데이터 (시작월 ~ 10월)
+  const months = [];
+  for (let m = S.month; m <= 10; m++) {
+    const sd  = allDaysInMonth(m);           // 전체 날수 (일요일 포함)
+    const ld  = lectureDaysInMonth(m);       // 강의 수강일 (월~토)
+    const sun = sd - ld;                     // 일요일 수 (복습일)
+    const lec = ld * lpd;                    // 해당 월 수강 강의수
+    months.push({ m, sd, ld, sun, lec });
+  }
+
+  return { totalDays, lecDays, capacity, totalNeeded, coveragePct, fullCount, result, months, lpd };
+}
+
+/* ═══════════════════ RENDER ══════════════════ */
+function generate() {
+  if (!S.target || !S.month || !S.hours) {
+    alert('시험 목표, 시작 월, 학습 시간을 모두 선택해주세요.');
+    return;
+  }
+
+  const p = buildPlan();
+  renderStats(p);
+  renderCurriculum(p);
+  renderWeekly(p);
+  renderMonthly(p);
+
+  const el = document.getElementById('results');
+  el.style.display = 'block';
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ── Stats ──────────────────────────────────── */
+function renderStats(p) {
+  const { totalDays, capacity, totalNeeded, coveragePct, fullCount } = p;
+  document.getElementById('stat-grid').innerHTML = [
+    { val: totalDays + '일',         lbl: '총 학습 기간'       },
+    { val: S.hours + 'h',            lbl: '하루 학습 시간'      },
+    { val: '약 ' + S.hours + '강',   lbl: '하루 수강 강의수'   },
+    { val: capacity + '강',          lbl: '수강 가능 총 강의'   },
+    { val: totalNeeded + '강',       lbl: '전체 커리큘럼 강의'  },
+    { val: coveragePct + '%',        lbl: '커리큘럼 커버율'     },
+    { val: fullCount + '/7',         lbl: '완주 가능 과정 수'   },
+  ].map(s =>
+    `<div class="stat-item"><div class="val">${s.val}</div><div class="lbl">${s.lbl}</div></div>`
+  ).join('');
+
+  document.getElementById('cov-label').textContent =
+    `전체 ${totalNeeded}강 중 ${Math.min(capacity, totalNeeded)}강 수강 가능 (${coveragePct}%)`;
+  document.getElementById('cov-bar').style.width = coveragePct + '%';
+}
+
+/* ── Curriculum roadmap ─────────────────────── */
+function renderCurriculum(p) {
+  const { result } = p;
+
+  // 1. 로드맵 그리드 (7단계 전체, 커리큘럼 순서 — 가로 스크롤 없이 한 화면에 표시)
+  let flowHtml = '<div class="rm-grid">';
+  result.forEach(c => {
+    const cls  = c.status === 'full' ? 'included' : c.status === 'partial' ? 'partial' : 'skipped';
+    const icon = c.status === 'full' ? '✅' : c.status === 'partial' ? '⚡' : '❌';
+    const sLbl = c.status === 'full' ? '완주 가능' : c.status === 'partial' ? `${c.pct}%` : '시간 부족';
+    const sClr = cls === 'included' ? 'var(--blue)' : cls === 'partial' ? '#b45309' : 'var(--gray-400)';
+    flowHtml += `
+      <div class="rm-cell ${cls}">
+        <div class="rm-seq">STEP ${c.seq}</div>
+        <div class="rm-name">${c.name}</div>
+        <div class="rm-cnt">${c.needed}강</div>
+        <div class="rm-icon">${icon}</div>
+        <div class="rm-stlbl" style="color:${sClr};">${sLbl}</div>
+      </div>`;
+  });
+  flowHtml += '</div>';
+
+  // 2. 실제 학습 경로 (포함된 것만, 커리큘럼 순서)
+  const included = result.filter(c => c.status !== 'skipped');
+  const skipped  = result.filter(c => c.status === 'skipped');
+
+  let pathHtml = `<div class="study-path">
+    <div class="sp-label">📖 실제 학습 순서 (커리큘럼 순서에 따라 순차 진행)</div>
+    <div class="sp-items">`;
+  included.forEach((c, i) => {
+    pathHtml += `<div class="sp-tag ${c.status === 'partial' ? 'partial-tag' : ''}">
+      ${c.name}
+      <span class="sp-lec">${c.status === 'partial' ? c.effective + '/' : ''}${c.needed}강</span>
+    </div>`;
+    if (i < included.length - 1) pathHtml += `<span class="sp-arr">→</span>`;
+  });
+  pathHtml += '</div></div>';
+
+  // 3. 생략 과정 안내
+  let skipHtml = '';
+  if (skipped.length > 0) {
+    skipHtml = `<div class="skip-note">
+      ⏭️ <strong>생략 과정 (시간 부족):</strong> ${skipped.map(c => c.name).join(', ')}<br>
+      학습 시작 월을 앞당기거나 하루 학습 시간을 늘리면 추가로 포함됩니다.
+    </div>`;
+  }
+
+  document.getElementById('curr-roadmap').innerHTML = flowHtml + pathHtml + skipHtml;
+}
+
+/* ── Weekly schedule ────────────────────────── */
+function renderWeekly(p) {
+  const subjs = SUBJECTS[S.target];
+  const n     = subjs.length;
+  const weekdays = ['월', '화', '수', '목', '금', '토'];  // 월~토 6일
+  const allDays  = [...weekdays, '일'];                    // + 일요일
+
+  // 시작 커리큘럼 안내
+  const firstCurr = p.result.find(c => c.status !== 'skipped');
+  const currNote  = firstCurr
+    ? `<div style="margin-bottom:14px;padding:10px 14px;background:var(--blue-light);
+         border:1px solid #bfdbfe;border-radius:8px;font-size:.84rem;color:#1e40af;">
+         📌 <strong>학습 시작 커리큘럼:</strong> ${firstCurr.name} (${firstCurr.needed}강)
+         — 아래 요일 패턴으로 과목을 순환하며 수강합니다.
+       </div>`
+    : '';
+
+  // 주간 패턴 구성
+  const buildWeek = (offset) =>
+    allDays.map((d, i) => {
+      if (i === 6) return { d, isReview: true };
+      const idx = (i + offset) % n;
+      return { d, subj: subjs[idx], cls: `s${idx}` };
+    });
+
+  const rows = [{ label: n === 4 ? 'A주' : '매주', schedule: buildWeek(0) }];
+  if (n === 4) rows.push({ label: 'B주', schedule: buildWeek(2) });
+
+  // 테이블 HTML
+  let html = currNote;
+  html += `<div class="week-scroll"><table class="week"><thead><tr><th>주차</th>`;
+  allDays.forEach(d => {
+    html += d === '일'
+      ? `<th class="sun-th">일 (복습)</th>`
+      : `<th>${d}</th>`;
+  });
+  html += `</tr></thead><tbody>`;
+
+  rows.forEach(row => {
+    html += `<tr>
+      <td style="font-weight:700;font-size:.8rem;color:var(--blue);white-space:nowrap;">${row.label}</td>`;
+    row.schedule.forEach(slot => {
+      if (slot.isReview) {
+        if (S.target === '1차') {
+          html += `<td class="sun-td">
+            <span class="stag sun-2">부족과목</span>
+          </td>`;
+        } else {
+          html += `<td class="sun-td">
+            <span class="stag sun-1" style="display:block;margin-bottom:2px;">~5월</span>
+            <span class="stag sun-2">6월~</span>
+          </td>`;
+        }
+      } else {
+        const short = SHORT[slot.subj] || slot.subj;
+        html += `<td>
+          <span class="stag ${slot.cls}">${short}</span>
+          <br><span style="font-size:.7rem;color:var(--gray-400);">${S.hours}h</span>
+        </td>`;
+      }
+    });
+    html += `</tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+
+  // 일요일 복습 설명 (목표에 따라 구분)
+  if (S.target === '1차') {
+    html += `<div class="sun-phase-box">
+      <strong>📚 일요일 복습 방식</strong>
+      <div class="phase-tags">
+        <span class="phase-tag phase-tag-2">매주 일요일: 부족한 과목 집중 복습</span>
+      </div>
+    </div>`;
+  } else {
+    html += `<div class="sun-phase-box">
+      <strong>📚 일요일 복습 방식</strong>
+      <div class="phase-tags">
+        <span class="phase-tag phase-tag-1">1월~5월: 1차 과목 복습 (부동산학개론·민법)</span>
+        <span class="phase-tag phase-tag-2">6월~10월: 부족한 과목 집중 복습</span>
+      </div>
+    </div>`;
+  }
+
+  const noteText = n === 4
+    ? 'A·B주를 격주로 반복합니다. 4과목이 2주 동안 각 3일씩 균등 배분됩니다.'
+    : n === 2
+    ? '두 과목이 3일씩 균등 배분됩니다.'
+    : '6과목이 1일씩 배분됩니다.';
+  html += `<div class="week-note">※ ${noteText} 동일한 커리큘럼을 해당 과목 완강 시까지 반복합니다.</div>`;
+
+  document.getElementById('week-table').innerHTML = html;
+}
+
+/* ── Monthly progress ───────────────────────── */
+function renderMonthly(p) {
+  const { result, months, lpd } = p;
+
+  // 수강하는 커리큘럼 (커리큘럼 순서)
+  const active = result
+    .filter(c => c.status !== 'skipped')
+    .map(c => ({ name: c.name, lec: c.effective }));
+
+  let globalPos = 0;
+  let html = '';
+
+  months.forEach(({ m, sd, ld, sun, lec }) => {
+    const mStart = globalPos;
+    const mEnd   = globalPos + lec;
+
+    // 이번 달에 해당하는 커리큘럼 계산
+    let localPos = 0;
+    const items  = [];
+    for (const a of active) {
+      const cS = localPos;
+      const cE = localPos + a.lec;
+      if (cE > mStart && cS < mEnd) {
+        const ov  = Math.min(cE, mEnd) - Math.max(cS, mStart);
+        const pct = Math.round(ov / lec * 100);
+        items.push({ name: a.name, pct });
+      }
+      localPos += a.lec;
+    }
+
+    const isExam   = m === 10;
+    // 1차 목표는 월 구분 없이 항상 부족과목 복습
+    const isPhase1 = S.target !== '1차' && m <= 5;
+    const mainCurr = items.length > 0 ? items.reduce((a, b) => a.pct >= b.pct ? a : b) : null;
+    const mainTag  = mainCurr
+      ? `<span style="font-size:.7rem;background:rgba(255,255,255,.25);padding:2px 8px;
+           border-radius:10px;margin-left:6px;">${mainCurr.name}</span>` : '';
+
+    html += `<div class="mo-card">
+      <div class="${isExam ? 'mo-head exam-head' : 'mo-head'}">
+        <span>${m}월${isExam ? ' 🎯' : ''}${mainTag}</span>
+        <span style="font-size:.75rem;opacity:.8;">${isExam ? '시험일 10.31' : `학습 ${sd}일`}</span>
+      </div>
+      <div class="mo-body">
+        <div class="mo-meta">하루 ${lpd}강 × ${ld}일(월~토) = 약 ${lec}강</div>
+        <div class="mo-sun ${isPhase1 ? 'phase1' : 'phase2'}">
+          📚 일요일 ${sun}회: ${isPhase1 ? '1차 과목 복습' : '부족한 과목 복습'}
+        </div>`;
+
+    if (items.length > 0) {
+      items.forEach(it => {
+        html += `<div class="mo-item">
+          <div class="mo-item-label"><span>${it.name}</span><span>${it.pct}%</span></div>
+          <div class="pb-bg"><div class="pb" style="width:${it.pct}%"></div></div>
+        </div>`;
+      });
+    } else {
+      html += `<div class="mo-done">✅ 전 커리큘럼 완료 · 최종 점검 기간</div>`;
+    }
+
+    html += `</div></div>`;
+    globalPos += lec;
+  });
+
+  document.getElementById('mo-grid').innerHTML = html;
+}
+</script>
+</body>
+</html>
