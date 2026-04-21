@@ -46,7 +46,19 @@
     header p  { margin-top: 6px; opacity: .8; font-size: .95rem; }
 
     /* ── Layout ─────────────────────────────────────── */
-    .wrap { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 24px 12px 60px; }
+
+    /* ── Steps 1+2 side-by-side on wide screens ─────── */
+    .steps-top {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    .steps-top .card { margin-bottom: 0; }
+    @media (max-width: 720px) {
+      .steps-top { grid-template-columns: 1fr; }
+    }
 
     /* ── Info banner ────────────────────────────────── */
     .exam-banner {
@@ -115,7 +127,7 @@
     /* ── Hours button grid (체크박스형) ─────────────── */
     .hours-group {
       display: grid;
-      grid-template-columns: repeat(6, 1fr);
+      grid-template-columns: repeat(6, minmax(60px, 140px));
       gap: 8px;
     }
     @media (max-width: 480px) { .hours-group { grid-template-columns: repeat(3, 1fr); } }
@@ -138,7 +150,7 @@
 
     /* ── Month grid ─────────────────────────────────── */
     .month-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-    @media (max-width: 480px) { .month-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (min-width: 721px) { .month-grid { grid-template-columns: repeat(4, 1fr); } }
     .month-btn {
       padding: 10px 6px;
       border: 2px solid var(--gray-200);
@@ -186,8 +198,11 @@
     /* ── Stat cards ─────────────────────────────────── */
     .stat-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      grid-template-columns: repeat(7, 1fr);
       gap: 12px;
+    }
+    @media (max-width: 720px) {
+      .stat-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
     }
     .stat-item {
       background: var(--gray-50);
@@ -340,7 +355,7 @@
     /* ── Monthly grid ────────────────────────────────── */
     .mo-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
       gap: 14px;
     }
     .mo-card { border: 1px solid var(--gray-200); border-radius: 10px; overflow: hidden; }
@@ -391,26 +406,28 @@
     <div class="dday" id="dday-text"></div>
   </div>
 
-  <!-- Step 1 -->
-  <div class="card">
-    <h2><span class="step-num">1</span>시험 목표 선택</h2>
-    <div class="opt-group" id="target-group">
-      <button class="opt-btn" data-v="1차" onclick="pick(this,'target')">
-        1차<small>부동산학개론·민법및민사특별법</small>
-      </button>
-      <button class="opt-btn" data-v="2차" onclick="pick(this,'target')">
-        2차<small>공인중개사법·부동산공법·공시법·세법</small>
-      </button>
-      <button class="opt-btn" data-v="1+2차" onclick="pick(this,'target')">
-        1차 + 2차<small>전 6과목 완주</small>
-      </button>
+  <div class="steps-top">
+    <!-- Step 1 -->
+    <div class="card">
+      <h2><span class="step-num">1</span>시험 목표 선택</h2>
+      <div class="opt-group" id="target-group">
+        <button class="opt-btn" data-v="1차" onclick="pick(this,'target')">
+          1차<small>부동산학개론·민법및민사특별법</small>
+        </button>
+        <button class="opt-btn" data-v="2차" onclick="pick(this,'target')">
+          2차<small>공인중개사법·부동산공법·공시법·세법</small>
+        </button>
+        <button class="opt-btn" data-v="1+2차" onclick="pick(this,'target')">
+          1차 + 2차<small>전 6과목 완주</small>
+        </button>
+      </div>
     </div>
-  </div>
 
-  <!-- Step 2 -->
-  <div class="card">
-    <h2><span class="step-num">2</span>학습 시작 월 선택</h2>
-    <div class="month-grid" id="month-grid"></div>
+    <!-- Step 2 -->
+    <div class="card">
+      <h2><span class="step-num">2</span>학습 시작 월 선택</h2>
+      <div class="month-grid" id="month-grid"></div>
+    </div>
   </div>
 
   <!-- Step 3 -->
