@@ -578,12 +578,13 @@ function updateHoursHint() {
   const hint = document.getElementById('hours-hint');
   const rec  = REC_HOURS[S.target];
   hint.style.display = '';
+  const targetLabel = S.target === '1+2차' ? '동차' : S.target;
   if (S.hours < rec) {
     hint.className = 'hours-hint warn';
-    hint.textContent = `⚠️ ${S.target} 목표의 권장 학습 시간은 하루 ${rec}시간입니다. 조금 더 늘리면 커버율이 높아집니다.`;
+    hint.textContent = `⚠️ ${targetLabel} 목표의 권장 학습 시간은 하루 ${rec}시간입니다. 조금 더 공부 시간을 확보하도록 노력해보세요.`;
   } else {
     hint.className = 'hours-hint ok';
-    hint.textContent = `✅ ${S.target} 목표 권장 시간(${rec}시간) 이상입니다. 좋습니다!`;
+    hint.textContent = `✅ ${targetLabel} 목표 권장 시간(${rec}시간) 이상입니다. 좋습니다!`;
   }
 }
 
