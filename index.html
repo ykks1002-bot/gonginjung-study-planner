@@ -202,8 +202,11 @@
     /* ── Stat cards ─────────────────────────────────── */
     .stat-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 10px;
+    }
+    @media (max-width: 500px) {
+      .stat-grid { grid-template-columns: repeat(4, 1fr); }
     }
     .stat-item {
       background: var(--gray-50);
@@ -212,7 +215,7 @@
       padding: 14px 12px;
       text-align: center;
     }
-    .stat-item .val  { font-size: 1.7rem; font-weight: 800; color: var(--blue); }
+    .stat-item .val  { font-size: clamp(1.1rem, 2.2vw, 1.7rem); font-weight: 800; color: var(--blue); }
     .stat-item .lbl  { font-size: .72rem; color: var(--gray-500); margin-top: 3px; }
 
     /* ── Coverage bar ────────────────────────────────── */
