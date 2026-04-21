@@ -209,12 +209,14 @@
     .bar-bg { background: #bfdbfe; border-radius: 4px; height: 10px; overflow: hidden; }
     .bar-fill { height: 100%; border-radius: 4px; background: var(--blue); transition: width .6s; }
 
-    /* ── Curriculum roadmap (7-column grid, no scroll) ─ */
+    /* ── Curriculum roadmap (7-column grid, always 1 row) ─ */
+    .rm-outer { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .rm-grid {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
       gap: 6px;
       margin-bottom: 4px;
+      min-width: 560px;
     }
     .rm-cell {
       display: flex; flex-direction: column;
@@ -228,7 +230,6 @@
     .rm-cell.included { border-color: var(--blue);  background: var(--blue-light); }
     .rm-cell.partial  { border-color: var(--amber); background: #fffbeb; }
     .rm-cell.skipped  { opacity: .4; }
-    /* 셀 사이 화살표 (CSS ::after, 가운데 정렬) */
     .rm-cell:not(:last-child)::after {
       content: '›';
       position: absolute;
@@ -236,7 +237,7 @@
       transform: translateY(-50%);
       width: 14px; text-align: center;
       font-size: 1.3rem; font-weight: 700; line-height: 1;
-      color: var(--gray-300); z-index: 2; pointer-events: none;
+      color: var(--gray-400); z-index: 2; pointer-events: none;
     }
     .rm-cell.included:not(:last-child)::after { color: var(--blue); }
     .rm-cell.partial:not(:last-child)::after  { color: var(--amber); }
@@ -247,16 +248,8 @@
     .rm-cnt  { font-size: .62rem; color: var(--gray-500); }
     .rm-icon { font-size: .88rem; }
     .rm-stlbl { font-size: .62rem; font-weight: 700; }
-    /* 모바일: 4열 → 화살표 숨김 */
-    @media (max-width: 620px) {
-      .rm-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
-      .rm-cell::after { display: none; }
-    }
-    @media (max-width: 380px) {
-      .rm-grid { grid-template-columns: repeat(2, 1fr); }
-    }
 
-    /* ── Study path summary ─────────────────────────── */
+    /* ── Study path summary (always 1 row) ─────────────── */
     .study-path {
       margin-top: 16px; padding: 14px 16px;
       background: #f0fdf4; border: 1px solid #86efac; border-radius: 10px;
@@ -264,18 +257,34 @@
     .study-path .sp-label {
       font-size: .82rem; font-weight: 700; color: #15803d; margin-bottom: 10px;
     }
+    .sp-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .sp-items {
-      display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+      display: grid;
+      gap: 6px;
+      /* grid-template-columns set dynamically in JS */
     }
     .sp-tag {
-      background: #dcfce7; color: #166534;
-      padding: 5px 12px; border-radius: 20px;
-      font-size: .82rem; font-weight: 700;
-      display: flex; flex-direction: column; align-items: center; gap: 1px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 10px 6px; border-radius: 10px;
+      border: 2px solid #86efac; background: #dcfce7; color: #166534;
+      font-size: .78rem; font-weight: 700;
+      text-align: center; gap: 3px;
+      position: relative;
+    }
+    .sp-tag:not(:last-child)::after {
+      content: '›';
+      position: absolute;
+      right: -10px; top: 50%;
+      transform: translateY(-50%);
+      width: 14px; text-align: center;
+      font-size: 1.3rem; font-weight: 700; line-height: 1;
+      color: #16a34a; z-index: 2; pointer-events: none;
     }
     .sp-tag .sp-lec { font-size: .65rem; font-weight: 400; opacity: .8; }
-    .sp-tag.partial-tag { background: #fef3c7; color: #92400e; }
-    .sp-arr { color: #16a34a; font-weight: 700; font-size: 1rem; }
+    .sp-tag.partial-tag { border-color: var(--amber); background: #fef3c7; color: #92400e; }
+    .sp-tag.partial-tag:not(:last-child)::after { color: var(--amber); }
+    .sp-arr { display: none; }
 
     /* ── Skip note ──────────────────────────────────── */
     .skip-note {
@@ -677,8 +686,8 @@ function renderStats(p) {
 function renderCurriculum(p) {
   const { result } = p;
 
-  // 1. 로드맵 그리드 (7단계 전체, 커리큘럼 순서 — 가로 스크롤 없이 한 화면에 표시)
-  let flowHtml = '<div class="rm-grid">';
+  // 1. 로드맵 그리드 (7단계 전체, 커리큘럼 순서 — 항상 한 줄 표시)
+  let flowHtml = '<div class="rm-outer"><div class="rm-grid">';
   result.forEach(c => {
     const cls  = c.status === 'full' ? 'included' : c.status === 'partial' ? 'partial' : 'skipped';
     const icon = c.status === 'full' ? '✅' : c.status === 'partial' ? '⚡' : '❌';
@@ -693,23 +702,25 @@ function renderCurriculum(p) {
         <div class="rm-stlbl" style="color:${sClr};">${sLbl}</div>
       </div>`;
   });
-  flowHtml += '</div>';
+  flowHtml += '</div></div>';
 
-  // 2. 실제 학습 경로 (포함된 것만, 커리큘럼 순서)
+  // 2. 실제 학습 경로 (포함된 것만, 커리큘럼 순서 — 항상 한 줄 표시)
   const included = result.filter(c => c.status !== 'skipped');
   const skipped  = result.filter(c => c.status === 'skipped');
+  const spCols   = included.length;
+  const spMinW   = spCols * 90;
 
   let pathHtml = `<div class="study-path">
     <div class="sp-label">📖 실제 학습 순서 (커리큘럼 순서에 따라 순차 진행)</div>
-    <div class="sp-items">`;
-  included.forEach((c, i) => {
+    <div class="sp-scroll">
+    <div class="sp-items" style="grid-template-columns:repeat(${spCols},1fr);min-width:${spMinW}px;">`;
+  included.forEach(c => {
     pathHtml += `<div class="sp-tag ${c.status === 'partial' ? 'partial-tag' : ''}">
       ${c.name}
       <span class="sp-lec">${c.status === 'partial' ? c.effective + '/' : ''}${c.needed}강</span>
     </div>`;
-    if (i < included.length - 1) pathHtml += `<span class="sp-arr">→</span>`;
   });
-  pathHtml += '</div></div>';
+  pathHtml += '</div></div></div>';
 
   // 3. 생략 과정 안내
   let skipHtml = '';
