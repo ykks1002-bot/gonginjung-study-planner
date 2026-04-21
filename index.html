@@ -580,8 +580,19 @@ function updateHoursHint() {
   hint.style.display = '';
   const targetLabel = S.target === '1+2차' ? '동차' : S.target;
   if (S.hours < rec) {
+    const encouragements = [
+      '조금 더 공부 시간을 확보하도록 노력해보세요.',
+      '짧은 시간도 꾸준히 쌓이면 큰 힘이 됩니다. 할 수 있어요!',
+      '합격의 문은 포기하지 않는 사람에게 열립니다. 화이팅!',
+      '매일 조금씩이라도 더 투자해보세요. 분명 결과가 달라집니다.',
+      '시간이 부족할수록 집중력이 빛을 발합니다. 믿어보세요!',
+      '목표를 향한 한 걸음 한 걸음이 합격을 만들어갑니다.',
+      '지금 이 노력이 시험장에서 반드시 빛날 거예요!',
+      '틈새 시간을 활용하면 생각보다 많이 공부할 수 있습니다.',
+    ];
+    const msg = encouragements[Math.floor(Math.random() * encouragements.length)];
     hint.className = 'hours-hint warn';
-    hint.textContent = `⚠️ ${targetLabel} 목표의 권장 학습 시간은 하루 ${rec}시간입니다. 조금 더 공부 시간을 확보하도록 노력해보세요.`;
+    hint.textContent = `⚠️ ${targetLabel} 목표의 권장 학습 시간은 하루 ${rec}시간입니다. ${msg}`;
   } else {
     hint.className = 'hours-hint ok';
     hint.textContent = `✅ ${targetLabel} 목표 권장 시간(${rec}시간) 이상입니다. 좋습니다!`;
