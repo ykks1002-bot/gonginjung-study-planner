@@ -299,30 +299,6 @@
     }
     .prog-hint strong { color: var(--blue); }
 
-    /* ── Pass pattern ────────────────────────────────── */
-    .pp-wrap {
-      margin-top: 16px; padding: 14px 16px;
-      background: #fafafa; border: 1px solid var(--gray-200);
-      border-radius: 10px;
-    }
-    .pp-title {
-      font-size: .82rem; font-weight: 700; color: var(--gray-700);
-      margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
-    }
-    .pp-grid {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
-    }
-    .pp-item {
-      background: #fff; border: 1px solid var(--gray-200);
-      border-radius: 8px; padding: 10px 8px; text-align: center;
-    }
-    .pp-item .pp-lbl  { font-size: .7rem; color: var(--gray-500); margin-bottom: 4px; }
-    .pp-item .pp-avg  { font-size: 1rem; font-weight: 800; color: var(--gray-700); }
-    .pp-item .pp-mine { font-size: .72rem; margin-top: 4px; font-weight: 600; }
-    .pp-item .pp-mine.good { color: var(--green); }
-    .pp-item .pp-mine.warn { color: var(--amber); }
-    .pp-item .pp-mine.bad  { color: var(--red); }
-    .pp-note { font-size: .7rem; color: var(--gray-400); margin-top: 8px; text-align: right; }
 
     .prog-bar-wrap {
       display: flex; align-items: center; justify-content: space-between;
@@ -526,7 +502,6 @@
     <div class="card">
       <div class="results-header">📊 나의 학습 현황</div>
       <div class="stat-grid" id="stat-grid"></div>
-      <div id="pass-pattern"></div>
     </div>
 
     <!-- Curriculum roadmap -->
@@ -572,12 +547,6 @@ const SUBJECTS = {
 };
 const REC_HOURS = { '1차': 3, '2차': 4, '1+2차': 6 };
 
-// 에듀윌 수강생 통계 기반 추정값
-const PASS_DATA = {
-  '1차':   { avgMonth: 5, avgHours: 4, passRate: 67 },
-  '2차':   { avgMonth: 4, avgHours: 5, passRate: 61 },
-  '1+2차': { avgMonth: 3, avgHours: 6, passRate: 54 },
-};
 const SHORT = {
   '부동산학개론':        '부동산학개론',
   '민법및민사특별법':    '민법',
@@ -778,7 +747,6 @@ function generate() {
   const p = buildPlan();
   window._plan = p;
   renderStats(p);
-  renderPassPattern();
   renderCurriculum(p);
   renderWeekly(p);
   renderMonthly(p);
@@ -803,57 +771,6 @@ function renderStats(p) {
     `<div class="stat-item"><div class="val">${s.val}</div><div class="lbl">${s.lbl}</div></div>`
   ).join('');
 
-}
-
-/* ── Pass pattern ───────────────────────────── */
-function renderPassPattern() {
-  const d = PASS_DATA[S.target];
-  if (!d) return;
-  const targetLabel = S.target === '1+2차' ? '동차' : S.target;
-  const userHours   = S.hours >= 9 ? 9 : S.hours;
-
-  const monthDiff = d.avgMonth - S.month;
-  const hoursDiff = userHours - d.avgHours;
-
-  const monthCls   = monthDiff <= 0 ? 'good' : monthDiff <= 2 ? 'warn' : 'bad';
-  const hoursCls   = hoursDiff >= 0 ? 'good' : hoursDiff >= -1 ? 'warn' : 'bad';
-  const monthTxt   = monthDiff < 0
-    ? `평균보다 ${-monthDiff}개월 일찍 ✓`
-    : monthDiff === 0 ? '평균과 동일 ✓'
-    : `평균보다 ${monthDiff}개월 늦음`;
-  const hoursTxt   = hoursDiff > 0
-    ? `평균보다 ${hoursDiff}시간 많음 ✓`
-    : hoursDiff === 0 ? '평균과 동일 ✓'
-    : `평균보다 ${-hoursDiff}시간 부족`;
-
-  // 합격 가능성 추정 (±3%/월, ±4%/시간)
-  const est = Math.min(92, Math.max(12,
-    d.passRate + (-monthDiff) * 3 + hoursDiff * 4
-  ));
-  const estCls = est >= d.passRate + 5 ? 'good' : est >= d.passRate - 5 ? 'warn' : 'bad';
-
-  document.getElementById('pass-pattern').innerHTML = `
-    <div class="pp-wrap">
-      <div class="pp-title">🏆 ${targetLabel} 합격자 평균 학습 패턴 <span style="font-size:.72rem;font-weight:400;color:var(--gray-400);">(에듀윌 수강생 통계)</span></div>
-      <div class="pp-grid">
-        <div class="pp-item">
-          <div class="pp-lbl">합격자 평균 시작 월</div>
-          <div class="pp-avg">${d.avgMonth}월</div>
-          <div class="pp-mine ${monthCls}">나: ${S.month}월 시작 · ${monthTxt}</div>
-        </div>
-        <div class="pp-item">
-          <div class="pp-lbl">합격자 평균 학습 시간</div>
-          <div class="pp-avg">${d.avgHours}시간/일</div>
-          <div class="pp-mine ${hoursCls}">나: ${userHours >= 9 ? '8시간+' : userHours + '시간'} · ${hoursTxt}</div>
-        </div>
-        <div class="pp-item">
-          <div class="pp-lbl">예상 합격 가능성</div>
-          <div class="pp-avg ${estCls}" style="color:${est>=60?'var(--green)':est>=40?'var(--amber)':'var(--red)'};">${est}%</div>
-          <div class="pp-mine ${estCls}">${est>=d.passRate?'평균 이상 👍':'조건 개선 필요'}</div>
-        </div>
-      </div>
-      <div class="pp-note">* 에듀윌 수강생 통계 기반 추정값입니다.</div>
-    </div>`;
 }
 
 /* ── Progress localStorage helpers ─────────── */
