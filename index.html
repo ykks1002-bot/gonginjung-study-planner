@@ -707,7 +707,7 @@ function renderStats(p) {
     { val: totalDays + '일',      lbl: '총 학습 기간'       },
     { val: hDisp,                 lbl: '하루 학습 시간'      },
     { val: '약 ' + S.hours + '강', lbl: '하루 수강<br>강의수'   },
-    { val: capacity + '강',          lbl: '수강 가능<br>총 강의'  },
+    { val: Math.min(capacity, totalNeeded) + '강', lbl: '수강 가능<br>총 강의'  },
     { val: totalNeeded + '강',       lbl: '전체 커리큘럼 강의'   },
     { val: fullCount + '/7',         lbl: '완주 가능<br>과정수'  },
   ].map(s =>
