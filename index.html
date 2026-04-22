@@ -263,10 +263,54 @@
     .rm-seq  { font-size: .6rem; font-weight: 800; color: var(--gray-400); }
     .rm-cell.included .rm-seq { color: var(--blue); }
     .rm-cell.partial  .rm-seq { color: #b45309; }
+    .rm-cell.done     .rm-seq { color: var(--green); }
     .rm-name { font-size: .7rem; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; width: 100%; }
     .rm-cnt  { font-size: .62rem; color: var(--gray-500); }
     .rm-icon { font-size: .88rem; }
     .rm-stlbl { font-size: .62rem; font-weight: 700; }
+
+    /* ── Progress check ─────────────────────────────── */
+    .rm-cell.done {
+      border-color: var(--green) !important;
+      background: #f0fdf4 !important;
+    }
+    .rm-cell.done:not(:last-child)::after { color: var(--green) !important; }
+    .rm-chk {
+      margin-top: 3px; width: 100%;
+      padding: 3px 0;
+      border-radius: 6px;
+      border: 1.5px solid currentColor;
+      font-size: .58rem; font-weight: 700;
+      cursor: pointer; background: transparent;
+      transition: all .15s; line-height: 1.3;
+    }
+    .rm-cell.included .rm-chk { color: var(--blue); }
+    .rm-cell.partial  .rm-chk { color: #b45309; }
+    .rm-cell.done     .rm-chk { color: var(--green); background: #dcfce7; border-color: var(--green); }
+    .rm-chk:hover { opacity: .75; }
+
+    .prog-bar-wrap {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px; padding: 10px 14px;
+      background: var(--gray-50); border: 1px solid var(--gray-200);
+      border-radius: 9px; gap: 12px;
+    }
+    .prog-dots { display: flex; gap: 5px; flex-wrap: nowrap; }
+    .prog-dot  {
+      width: 13px; height: 13px; border-radius: 50%;
+      background: var(--gray-200); flex-shrink: 0;
+    }
+    .prog-dot.pd-done    { background: var(--green); }
+    .prog-dot.pd-active  { background: var(--blue); }
+    .prog-dot.pd-partial { background: var(--amber); }
+    .prog-dot.pd-skip    { background: var(--gray-200); opacity: .4; }
+    .prog-txt { font-size: .85rem; font-weight: 700; white-space: nowrap; }
+    .prog-reset {
+      padding: 5px 12px; border: 1px solid var(--gray-200);
+      border-radius: 6px; background: #fff;
+      font-size: .75rem; color: var(--gray-500); cursor: pointer; white-space: nowrap;
+    }
+    .prog-reset:hover { border-color: var(--red); color: var(--red); }
 
     /* ── Study path summary (always 1 row) ─────────────── */
     .study-path {
@@ -689,6 +733,7 @@ function generate() {
   }
 
   const p = buildPlan();
+  window._plan = p;
   renderStats(p);
   renderCurriculum(p);
   renderWeekly(p);
@@ -716,17 +761,65 @@ function renderStats(p) {
 
 }
 
+/* ── Progress localStorage helpers ─────────── */
+function progressKey() {
+  return `gjp_${S.target}_${S.month}_${S.hours}`;
+}
+function getProgress() {
+  try { return new Set(JSON.parse(localStorage.getItem(progressKey()) || '[]')); }
+  catch { return new Set(); }
+}
+function saveProgress(s) {
+  localStorage.setItem(progressKey(), JSON.stringify([...s]));
+}
+function toggleDone(seq) {
+  const d = getProgress();
+  d.has(seq) ? d.delete(seq) : d.add(seq);
+  saveProgress(d);
+  renderCurriculum(window._plan);
+}
+function resetProgress() {
+  localStorage.removeItem(progressKey());
+  renderCurriculum(window._plan);
+}
+
 /* ── Curriculum roadmap ─────────────────────── */
 function renderCurriculum(p) {
   const { result } = p;
+  const done = getProgress();
+  const active = result.filter(c => c.status !== 'skipped');
+  const doneCount = active.filter(c => done.has(c.seq)).length;
+  const allDone = active.length > 0 && doneCount === active.length;
+
+  // 진도 요약 바
+  const dots = result.map(c => {
+    if (c.status === 'skipped')           return `<div class="prog-dot pd-skip"></div>`;
+    if (done.has(c.seq))                  return `<div class="prog-dot pd-done"></div>`;
+    if (c.status === 'partial')           return `<div class="prog-dot pd-partial"></div>`;
+    return `<div class="prog-dot pd-active"></div>`;
+  }).join('');
+
+  const progColor = allDone ? 'var(--green)' : 'var(--gray-700)';
+  const progMsg   = allDone ? '🎉 전 과정 완료!' : `${doneCount} / ${active.length} 완료`;
+  const progHtml  = `<div class="prog-bar-wrap">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="prog-dots">${dots}</div>
+      <span class="prog-txt" style="color:${progColor};">${progMsg}</span>
+    </div>
+    <button class="prog-reset" onclick="resetProgress()">초기화</button>
+  </div>`;
 
   // 1. 로드맵 그리드 (7단계 전체, 커리큘럼 순서 — 항상 한 줄 표시)
   let flowHtml = '<div class="rm-outer"><div class="rm-grid">';
   result.forEach(c => {
-    const cls  = c.status === 'full' ? 'included' : c.status === 'partial' ? 'partial' : 'skipped';
-    const icon = c.status === 'full' ? '✅' : c.status === 'partial' ? '⚡' : '❌';
-    const sLbl = c.status === 'full' ? '완주 가능' : c.status === 'partial' ? `${c.pct}%` : '시간 부족';
-    const sClr = cls === 'included' ? 'var(--blue)' : cls === 'partial' ? '#b45309' : 'var(--gray-400)';
+    const isDone  = done.has(c.seq) && c.status !== 'skipped';
+    const baseCls = c.status === 'full' ? 'included' : c.status === 'partial' ? 'partial' : 'skipped';
+    const cls     = isDone ? `${baseCls} done` : baseCls;
+    const icon    = isDone ? '✅' : c.status === 'full' ? '⬜' : c.status === 'partial' ? '⚡' : '❌';
+    const sLbl    = isDone ? '완료!' : c.status === 'full' ? '완주 가능' : c.status === 'partial' ? `${c.pct}%` : '시간 부족';
+    const sClr    = isDone ? 'var(--green)' : baseCls === 'included' ? 'var(--blue)' : baseCls === 'partial' ? '#b45309' : 'var(--gray-400)';
+    const chkBtn  = c.status !== 'skipped'
+      ? `<button class="rm-chk" onclick="toggleDone(${c.seq})">${isDone ? '✓ 완료됨' : '완료 체크'}</button>` : '';
     flowHtml += `
       <div class="rm-cell ${cls}">
         <div class="rm-seq">STEP ${c.seq}</div>
@@ -734,6 +827,7 @@ function renderCurriculum(p) {
         <div class="rm-cnt">${c.needed}강</div>
         <div class="rm-icon">${icon}</div>
         <div class="rm-stlbl" style="color:${sClr};">${sLbl}</div>
+        ${chkBtn}
       </div>`;
   });
   flowHtml += '</div></div>';
@@ -765,7 +859,7 @@ function renderCurriculum(p) {
     </div>`;
   }
 
-  document.getElementById('curr-roadmap').innerHTML = flowHtml + pathHtml + skipHtml;
+  document.getElementById('curr-roadmap').innerHTML = progHtml + flowHtml + pathHtml + skipHtml;
 }
 
 /* ── Weekly schedule ────────────────────────── */
