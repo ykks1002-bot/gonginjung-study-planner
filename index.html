@@ -276,18 +276,53 @@
     }
     .rm-cell.done:not(:last-child)::after { color: var(--green) !important; }
     .rm-chk {
-      margin-top: 3px; width: 100%;
-      padding: 3px 0;
-      border-radius: 6px;
-      border: 1.5px solid currentColor;
-      font-size: .58rem; font-weight: 700;
-      cursor: pointer; background: transparent;
+      margin-top: 5px; width: 100%;
+      padding: 6px 2px;
+      border-radius: 8px;
+      border: 2px solid currentColor;
+      font-size: .68rem; font-weight: 800;
+      cursor: pointer;
       transition: all .15s; line-height: 1.3;
+      display: flex; align-items: center; justify-content: center; gap: 3px;
     }
-    .rm-cell.included .rm-chk { color: var(--blue); }
-    .rm-cell.partial  .rm-chk { color: #b45309; }
-    .rm-cell.done     .rm-chk { color: var(--green); background: #dcfce7; border-color: var(--green); }
-    .rm-chk:hover { opacity: .75; }
+    .rm-cell.included .rm-chk { color: var(--blue);   background: var(--blue-light); }
+    .rm-cell.partial  .rm-chk { color: #b45309;       background: #fffbeb; }
+    .rm-cell.done     .rm-chk { color: var(--green);  background: #dcfce7; border-color: var(--green); }
+    .rm-chk:hover { filter: brightness(.93); transform: scale(1.03); }
+
+    /* ── Progress hint ───────────────────────────────── */
+    .prog-hint {
+      margin-top: 14px; padding: 12px 16px;
+      background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+      border: 1px solid #bfdbfe; border-radius: 10px;
+      font-size: .84rem; color: var(--gray-700); text-align: center; line-height: 1.7;
+    }
+    .prog-hint strong { color: var(--blue); }
+
+    /* ── Pass pattern ────────────────────────────────── */
+    .pp-wrap {
+      margin-top: 16px; padding: 14px 16px;
+      background: #fafafa; border: 1px solid var(--gray-200);
+      border-radius: 10px;
+    }
+    .pp-title {
+      font-size: .82rem; font-weight: 700; color: var(--gray-700);
+      margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
+    }
+    .pp-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    }
+    .pp-item {
+      background: #fff; border: 1px solid var(--gray-200);
+      border-radius: 8px; padding: 10px 8px; text-align: center;
+    }
+    .pp-item .pp-lbl  { font-size: .7rem; color: var(--gray-500); margin-bottom: 4px; }
+    .pp-item .pp-avg  { font-size: 1rem; font-weight: 800; color: var(--gray-700); }
+    .pp-item .pp-mine { font-size: .72rem; margin-top: 4px; font-weight: 600; }
+    .pp-item .pp-mine.good { color: var(--green); }
+    .pp-item .pp-mine.warn { color: var(--amber); }
+    .pp-item .pp-mine.bad  { color: var(--red); }
+    .pp-note { font-size: .7rem; color: var(--gray-400); margin-top: 8px; text-align: right; }
 
     .prog-bar-wrap {
       display: flex; align-items: center; justify-content: space-between;
@@ -491,6 +526,7 @@
     <div class="card">
       <div class="results-header">📊 나의 학습 현황</div>
       <div class="stat-grid" id="stat-grid"></div>
+      <div id="pass-pattern"></div>
     </div>
 
     <!-- Curriculum roadmap -->
@@ -535,6 +571,13 @@ const SUBJECTS = {
   '1+2차': ['부동산학개론', '민법및민사특별법', '공인중개사법령및실무', '부동산공법', '부동산공시법령', '부동산세법'],
 };
 const REC_HOURS = { '1차': 3, '2차': 4, '1+2차': 6 };
+
+// 에듀윌 수강생 통계 기반 추정값
+const PASS_DATA = {
+  '1차':   { avgMonth: 5, avgHours: 4, passRate: 67 },
+  '2차':   { avgMonth: 4, avgHours: 5, passRate: 61 },
+  '1+2차': { avgMonth: 3, avgHours: 6, passRate: 54 },
+};
 const SHORT = {
   '부동산학개론':        '부동산학개론',
   '민법및민사특별법':    '민법',
@@ -735,6 +778,7 @@ function generate() {
   const p = buildPlan();
   window._plan = p;
   renderStats(p);
+  renderPassPattern();
   renderCurriculum(p);
   renderWeekly(p);
   renderMonthly(p);
@@ -759,6 +803,57 @@ function renderStats(p) {
     `<div class="stat-item"><div class="val">${s.val}</div><div class="lbl">${s.lbl}</div></div>`
   ).join('');
 
+}
+
+/* ── Pass pattern ───────────────────────────── */
+function renderPassPattern() {
+  const d = PASS_DATA[S.target];
+  if (!d) return;
+  const targetLabel = S.target === '1+2차' ? '동차' : S.target;
+  const userHours   = S.hours >= 9 ? 9 : S.hours;
+
+  const monthDiff = d.avgMonth - S.month;
+  const hoursDiff = userHours - d.avgHours;
+
+  const monthCls   = monthDiff <= 0 ? 'good' : monthDiff <= 2 ? 'warn' : 'bad';
+  const hoursCls   = hoursDiff >= 0 ? 'good' : hoursDiff >= -1 ? 'warn' : 'bad';
+  const monthTxt   = monthDiff < 0
+    ? `평균보다 ${-monthDiff}개월 일찍 ✓`
+    : monthDiff === 0 ? '평균과 동일 ✓'
+    : `평균보다 ${monthDiff}개월 늦음`;
+  const hoursTxt   = hoursDiff > 0
+    ? `평균보다 ${hoursDiff}시간 많음 ✓`
+    : hoursDiff === 0 ? '평균과 동일 ✓'
+    : `평균보다 ${-hoursDiff}시간 부족`;
+
+  // 합격 가능성 추정 (±3%/월, ±4%/시간)
+  const est = Math.min(92, Math.max(12,
+    d.passRate + (-monthDiff) * 3 + hoursDiff * 4
+  ));
+  const estCls = est >= d.passRate + 5 ? 'good' : est >= d.passRate - 5 ? 'warn' : 'bad';
+
+  document.getElementById('pass-pattern').innerHTML = `
+    <div class="pp-wrap">
+      <div class="pp-title">🏆 ${targetLabel} 합격자 평균 학습 패턴 <span style="font-size:.72rem;font-weight:400;color:var(--gray-400);">(에듀윌 수강생 통계)</span></div>
+      <div class="pp-grid">
+        <div class="pp-item">
+          <div class="pp-lbl">합격자 평균 시작 월</div>
+          <div class="pp-avg">${d.avgMonth}월</div>
+          <div class="pp-mine ${monthCls}">나: ${S.month}월 시작 · ${monthTxt}</div>
+        </div>
+        <div class="pp-item">
+          <div class="pp-lbl">합격자 평균 학습 시간</div>
+          <div class="pp-avg">${d.avgHours}시간/일</div>
+          <div class="pp-mine ${hoursCls}">나: ${userHours >= 9 ? '8시간+' : userHours + '시간'} · ${hoursTxt}</div>
+        </div>
+        <div class="pp-item">
+          <div class="pp-lbl">예상 합격 가능성</div>
+          <div class="pp-avg ${estCls}" style="color:${est>=60?'var(--green)':est>=40?'var(--amber)':'var(--red)'};">${est}%</div>
+          <div class="pp-mine ${estCls}">${est>=d.passRate?'평균 이상 👍':'조건 개선 필요'}</div>
+        </div>
+      </div>
+      <div class="pp-note">* 에듀윌 수강생 통계 기반 추정값입니다.</div>
+    </div>`;
 }
 
 /* ── Progress localStorage helpers ─────────── */
@@ -819,7 +914,7 @@ function renderCurriculum(p) {
     const sLbl    = isDone ? '완료!' : c.status === 'full' ? '완주 가능' : c.status === 'partial' ? `${c.pct}%` : '시간 부족';
     const sClr    = isDone ? 'var(--green)' : baseCls === 'included' ? 'var(--blue)' : baseCls === 'partial' ? '#b45309' : 'var(--gray-400)';
     const chkBtn  = c.status !== 'skipped'
-      ? `<button class="rm-chk" onclick="toggleDone(${c.seq})">${isDone ? '✓ 완료됨' : '완료 체크'}</button>` : '';
+      ? `<button class="rm-chk" onclick="toggleDone(${c.seq})">${isDone ? '☑ 완료됨' : '☐ 완료 체크'}</button>` : '';
     flowHtml += `
       <div class="rm-cell ${cls}">
         <div class="rm-seq">STEP ${c.seq}</div>
@@ -859,7 +954,12 @@ function renderCurriculum(p) {
     </div>`;
   }
 
-  document.getElementById('curr-roadmap').innerHTML = progHtml + flowHtml + pathHtml + skipHtml;
+  const hintHtml = `<div class="prog-hint">
+    📖 각 커리큘럼을 완강하셨나요? <strong>☐ 완료 체크</strong> 버튼을 눌러 나만의 합격 여정을 기록해보세요!<br>
+    하나씩 체크할 때마다 합격이 한 걸음 더 가까워집니다. 꾸준히 함께 가요 💪
+  </div>`;
+
+  document.getElementById('curr-roadmap').innerHTML = progHtml + flowHtml + hintHtml + pathHtml + skipHtml;
 }
 
 /* ── Weekly schedule ────────────────────────── */
