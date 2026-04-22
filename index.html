@@ -480,9 +480,12 @@
       <div class="sub">2026년 제37회 공인중개사 시험</div>
       <div class="main-date">시험일&nbsp; 2026년 10월 31일 (토)</div>
     </div>
-    <div style="text-align:right;">
-      <div class="sub">원서접수</div>
-      <div style="font-weight:600;">2026.08.03 ~ 08.07</div>
+    <div style="display:flex; align-items:center; gap:12px; flex-shrink:0;">
+      <div style="text-align:right;">
+        <div class="sub">원서접수</div>
+        <div style="font-weight:600;">2026.08.03 ~ 08.07</div>
+      </div>
+      <div class="my-plan-btn" id="my-plan-btn" onclick="goMyPlan()" style="display:none;"></div>
     </div>
     <div class="dday" id="dday-text"></div>
   </div>
@@ -1131,17 +1134,5 @@ function saveMyPlanWithFeedback(btn) {
 }
 </script>
 
-<!-- 나의 학습계획 바로가기 (오른쪽 여백 고정) -->
-<div id="my-plan-btn" onclick="goMyPlan()" style="display:none;
-  position:fixed; top:110px; right:max(16px, calc((100vw - 860px)/2 - 144px));
-  z-index:999; cursor:pointer;
-  background:linear-gradient(135deg,#1e40af,#2563eb);
-  border:2px solid rgba(255,255,255,.5);
-  border-radius:14px; padding:12px 14px; color:#fff;
-  box-shadow:0 4px 16px rgba(37,99,235,.3);
-  min-width:120px; text-align:center; transition:all .15s;"
-  onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 20px rgba(37,99,235,.45)'"
-  onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 16px rgba(37,99,235,.3)'">
-</div>
 </body>
 </html>
