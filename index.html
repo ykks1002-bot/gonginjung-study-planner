@@ -246,8 +246,8 @@
       background: var(--gray-100);
       position: relative;
     }
-    .rm-cell.included { border-color: var(--blue);  background: var(--blue-light); }
-    .rm-cell.partial  { border-color: var(--amber); background: #fffbeb; }
+    .rm-cell.included { border-color: var(--blue); background: var(--blue-light); }
+    .rm-cell.partial  { border-color: var(--blue); background: var(--blue-light); }
     .rm-cell.skipped  { opacity: .4; }
     .rm-cell:not(:last-child)::after {
       content: '›';
@@ -259,10 +259,10 @@
       color: var(--gray-400); z-index: 2; pointer-events: none;
     }
     .rm-cell.included:not(:last-child)::after { color: var(--blue); }
-    .rm-cell.partial:not(:last-child)::after  { color: var(--amber); }
+    .rm-cell.partial:not(:last-child)::after  { color: var(--blue); }
     .rm-seq  { font-size: .6rem; font-weight: 800; color: var(--gray-400); }
     .rm-cell.included .rm-seq { color: var(--blue); }
-    .rm-cell.partial  .rm-seq { color: #b45309; }
+    .rm-cell.partial  .rm-seq { color: var(--blue); }
     .rm-cell.done     .rm-seq { color: var(--green); }
     .rm-name { font-size: .7rem; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; width: 100%; }
     .rm-cnt  { font-size: .62rem; color: var(--gray-500); }
@@ -285,8 +285,8 @@
       transition: all .15s; line-height: 1.3;
       display: flex; align-items: center; justify-content: center; gap: 3px;
     }
-    .rm-cell.included .rm-chk { color: #fff; background: var(--blue);   border-color: var(--blue); }
-    .rm-cell.partial  .rm-chk { color: #fff; background: #d97706;       border-color: #d97706; }
+    .rm-cell.included .rm-chk { color: #fff; background: var(--blue); border-color: var(--blue); }
+    .rm-cell.partial  .rm-chk { color: #fff; background: var(--blue); border-color: var(--blue); }
     .rm-cell.done     .rm-chk { color: #fff; background: var(--green);  border-color: var(--green); }
     .rm-chk:hover { filter: brightness(.93); transform: scale(1.03); }
 
@@ -356,8 +356,8 @@
       color: #16a34a; z-index: 2; pointer-events: none;
     }
     .sp-tag .sp-lec { font-size: .65rem; font-weight: 400; opacity: .8; }
-    .sp-tag.partial-tag { border-color: var(--amber); background: #fef3c7; color: #92400e; }
-    .sp-tag.partial-tag:not(:last-child)::after { color: var(--amber); }
+    .sp-tag.partial-tag { border-color: #86efac; background: #dcfce7; color: #166534; }
+    .sp-tag.partial-tag:not(:last-child)::after { color: #16a34a; }
     .sp-arr { display: none; }
 
     /* ── Skip note ──────────────────────────────────── */
@@ -829,7 +829,7 @@ function renderCurriculum(p) {
     const cls     = isDone ? `${baseCls} done` : baseCls;
     const icon    = isDone ? '✅' : c.status === 'full' ? '⬜' : c.status === 'partial' ? '⚡' : '❌';
     const sLbl    = isDone ? '완료!' : c.status === 'full' ? '완주 가능' : c.status === 'partial' ? `${c.pct}%` : '시간 부족';
-    const sClr    = isDone ? 'var(--green)' : baseCls === 'included' ? 'var(--blue)' : baseCls === 'partial' ? '#b45309' : 'var(--gray-400)';
+    const sClr    = isDone ? 'var(--green)' : baseCls === 'skipped' ? 'var(--gray-400)' : 'var(--blue)';
     const chkBtn  = c.status !== 'skipped'
       ? `<button class="rm-chk" onclick="toggleDone(${c.seq})">${isDone ? '☑ 완료됨' : '☐ 완료 체크'}</button>` : '';
     flowHtml += `
