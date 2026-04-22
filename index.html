@@ -480,11 +480,13 @@
       <div class="sub">2026년 제37회 공인중개사 시험</div>
       <div class="main-date">시험일&nbsp; 2026년 10월 31일 (토)</div>
     </div>
-    <div style="text-align:right;">
-      <div class="sub">원서접수</div>
-      <div style="font-weight:600;">2026.08.03 ~ 08.07</div>
+    <div style="display:flex; gap:12px; align-items:center;">
+      <div style="text-align:right;">
+        <div class="sub">원서접수</div>
+        <div style="font-weight:600;">2026.08.03 ~ 08.07</div>
+      </div>
+      <div class="my-plan-btn" id="my-plan-btn" onclick="goMyPlan()" style="display:none;"></div>
     </div>
-    <div class="my-plan-btn" id="my-plan-btn" onclick="goMyPlan()" style="display:none;"></div>
     <div class="dday" id="dday-text"></div>
   </div>
 
@@ -543,6 +545,16 @@
     <div class="card">
       <div class="results-header">🗓️ 월별 학습 진도</div>
       <div class="mo-grid" id="mo-grid"></div>
+      <div style="text-align:center; margin-top:18px;">
+        <button onclick="saveMyPlan()" style="
+          background: var(--blue); color:#fff; border:none; border-radius:10px;
+          padding:12px 28px; font-size:.95rem; font-weight:700; cursor:pointer;
+          box-shadow:0 2px 8px rgba(37,99,235,.25); transition:all .15s;
+        " onmouseover="this.style.background='var(--blue-dark)'"
+           onmouseout="this.style.background='var(--blue)'">
+          💾 나의 학습계획으로 저장하기
+        </button>
+      </div>
     </div>
 
   </div><!-- /results -->
@@ -775,7 +787,6 @@ function generate() {
   renderCurriculum(p);
   renderWeekly(p);
   renderMonthly(p);
-  saveMyPlan();
 
   const el = document.getElementById('results');
   el.style.display = 'block';
