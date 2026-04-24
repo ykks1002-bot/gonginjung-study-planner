@@ -554,6 +554,18 @@
   </div><!-- /results -->
 </div><!-- /wrap -->
 
+<!-- 나의 학습계획 바로가기: script 앞에 위치해야 페이지 로드 시 DOM에 존재 -->
+<div id="my-plan-btn" onclick="goMyPlan()" class="my-plan-btn" style="display:none;
+  position:fixed;
+  top:140px;
+  right:max(12px, calc((100vw - 860px) / 2 - 148px));
+  z-index:1000;
+  background:linear-gradient(135deg,#1e40af,#2563eb);
+  border-color:rgba(255,255,255,.6);
+  box-shadow:0 4px 16px rgba(37,99,235,.3);
+  align-self:unset;">
+</div>
+
 <script>
 /* ═══════════════════ DATA ═══════════════════ */
 const EXAM_DATE = new Date(2026, 9, 31);   // Oct 31 2026
@@ -1130,17 +1142,6 @@ function saveMyPlanWithFeedback(btn) {
   }, 2000);
 }
 </script>
-
-<div id="my-plan-btn" onclick="goMyPlan()" class="my-plan-btn" style="display:none;
-  position:fixed;
-  top:140px;
-  right:max(12px, calc((100vw - 860px) / 2 - 148px));
-  z-index:1000;
-  background:linear-gradient(135deg,#1e40af,#2563eb);
-  border-color:rgba(255,255,255,.6);
-  box-shadow:0 4px 16px rgba(37,99,235,.3);
-  align-self:unset;">
-</div>
 
 </body>
 </html>
