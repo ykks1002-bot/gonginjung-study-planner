@@ -889,7 +889,7 @@ function renderGantt(p) {
   const active = result
     .filter(c => c.status !== 'skipped')
     .map(c => ({
-      name: c.name.replace(/<br>/g, ' ').replace(/& /g, '& ').replace(/& /g, '& '),
+      name: c.name.replace(/<br>/g, ''),
       lec:  c.effective,
     }));
 
