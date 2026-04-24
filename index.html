@@ -599,6 +599,7 @@ const SHORT = {
 
 /* ═══════════════════ STATE ═══════════════════ */
 const S = { target: null, month: null, hours: null };
+const MY_PLAN_KEY = 'gjp_my_plan';
 
 /* ═══════════════════ INIT ════════════════════ */
 (function init() {
@@ -817,8 +818,6 @@ function renderStats(p) {
 }
 
 /* ── My plan (last settings) ────────────────── */
-const MY_PLAN_KEY = 'gjp_my_plan';
-
 function saveMyPlan() {
   localStorage.setItem(MY_PLAN_KEY, JSON.stringify({
     target: S.target, month: S.month, hours: S.hours
