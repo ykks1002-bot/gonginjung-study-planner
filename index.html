@@ -788,8 +788,13 @@ function getLecturesForTarget(c, target) {
 }
 
 function buildPlan() {
-  const startDate   = new Date(2026, S.month - 1, 1);
-  const totalDays   = Math.ceil((EXAM_DATE - startDate) / 864e5);
+  const now        = new Date();
+  const curMonth   = now.getMonth() + 1;  // 현재 월 (1-indexed)
+  // 선택 월이 현재 월 이하면 오늘부터, 미래 월이면 해당 월 1일부터 시작
+  const startDate  = S.month <= curMonth
+    ? new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    : new Date(2026, S.month - 1, 1);
+  const totalDays  = Math.ceil((EXAM_DATE - startDate) / 864e5);
   const lpd         = lecturesPerDay(S.hours);
 
   // 강의 수강은 월~토 (6일/주), 일요일은 복습
