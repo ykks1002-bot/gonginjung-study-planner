@@ -1333,12 +1333,52 @@ async function downloadPDF(btn) {
         <div style="font-size:12px;opacity:.85;">${tLbl} &nbsp;·&nbsp; ${S.month}월 시작 &nbsp;·&nbsp; 하루 ${hLbl}</div>
       </div>`;
 
-    // 로드맵 섹션 (gantt 복제)
+    // 로드맵 섹션 (gantt 복제 + 커리큘럼명 강제 표기)
     const ganttClone = document.getElementById('gantt-chart').cloneNode(true);
+
+    // 바 안 텍스트: overflow 해제 + 바 외부에 이름 라벨 추가
+    ganttClone.querySelectorAll('.gantt-bar').forEach(bar => {
+      const name = bar.dataset.name || '';
+      bar.style.overflow = 'visible';
+      // 바 위에 이름 라벨 (항상 표시)
+      const lbl = document.createElement('div');
+      lbl.style.cssText = `
+        position:absolute; left:0; right:0;
+        bottom:calc(100% + 2px);
+        font-size:9.5px; font-weight:700; color:#1e293b;
+        white-space:nowrap; text-align:center;
+        line-height:1.2; pointer-events:none;
+      `;
+      lbl.textContent = name;
+      bar.style.position = 'absolute'; // 이미 absolute이지만 명시
+      bar.appendChild(lbl);
+      // 바 내부 span 숨기기 (라벨로 대체)
+      const span = bar.querySelector('span');
+      if (span) span.style.display = 'none';
+    });
+    // 레이블 열 폰트 강화
+    ganttClone.querySelectorAll('.gantt-label-row').forEach(el => {
+      el.style.fontSize = '11px';
+      el.style.fontWeight = '700';
+      el.style.color = '#334155';
+    });
+    // 바 영역 상단 여백 확보 (라벨이 잘리지 않도록)
+    const barsArea = ganttClone.querySelector('.gantt-bars');
+    if (barsArea) {
+      const curH = parseInt(barsArea.style.height) || 0;
+      barsArea.style.height = (curH + 16) + 'px';
+      barsArea.style.paddingTop = '16px';
+    }
+    const timelineArea = ganttClone.querySelector('.gantt-timeline-area');
+    if (timelineArea) {
+      const curH = parseInt(timelineArea.style.height) || 0;
+      timelineArea.style.height = (curH + 16) + 'px';
+    }
+
     const ganttSec = document.createElement('div');
     ganttSec.style.cssText = 'padding:14px 24px 8px;';
     ganttSec.innerHTML = `<div style="font-size:13px;font-weight:700;color:#334155;
-      border-bottom:2px solid #e2e8f0;padding-bottom:8px;margin-bottom:10px;">
+      border-bottom:2px solid #e2e8f0;padding-bottom:8px;margin-bottom:14px;">
       📚 추천 커리큘럼 학습로드맵</div>`;
     ganttSec.appendChild(ganttClone);
     wrap.appendChild(ganttSec);
