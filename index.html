@@ -417,7 +417,7 @@
     .gantt-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .gantt-inner { min-width: 520px; }
     .gantt-header { display: flex; margin-bottom: 2px; }
-    .gantt-label-col-h { width: 88px; flex-shrink: 0; }
+    .gantt-label-col-h { width: 104px; flex-shrink: 0; }
     .gantt-month-headers { flex: 1; display: grid; }
     .gantt-month-h {
       text-align: center; font-size: .72rem; font-weight: 700;
@@ -425,7 +425,7 @@
       border-left: 1px solid var(--gray-200);
     }
     .gantt-body { display: flex; }
-    .gantt-labels { width: 88px; flex-shrink: 0; }
+    .gantt-labels { width: 104px; flex-shrink: 0; }
     .gantt-label-row {
       display: flex; align-items: center;
       font-size: .68rem; color: var(--gray-500); font-weight: 600;
@@ -442,17 +442,27 @@
     .gantt-bar {
       position: absolute;
       border-radius: 20px;
-      display: flex; align-items: center;
-      padding: 0 12px;
-      box-shadow: 0 2px 6px rgba(37,99,235,.2);
-      cursor: default;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,.15);
+      cursor: pointer;
       overflow: hidden;
-      transition: filter .15s;
+      transition: filter .15s, box-shadow .15s;
     }
-    .gantt-bar:hover { filter: brightness(1.1); box-shadow: 0 4px 12px rgba(37,99,235,.35); }
+    .gantt-bar:hover { filter: brightness(1.12); box-shadow: 0 4px 14px rgba(0,0,0,.25); }
     .gantt-bar span {
       color: #fff; font-size: .68rem; font-weight: 700;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      text-align: center; text-shadow: 0 1px 2px rgba(0,0,0,.18);
+    }
+    #gantt-tooltip {
+      position: fixed; z-index: 9999;
+      background: #1e293b; color: #fff;
+      padding: 6px 13px; border-radius: 8px;
+      font-size: .78rem; font-weight: 600;
+      pointer-events: none; display: none;
+      box-shadow: 0 4px 14px rgba(0,0,0,.3);
+      white-space: nowrap;
     }
 
     /* ── Monthly grid ────────────────────────────────── */
@@ -858,19 +868,32 @@ function generate() {
 }
 
 /* ── Gantt chart ────────────────────────────── */
+const GANTT_COLORS = [
+  'linear-gradient(90deg,#38bdf8,#0ea5e9)',   // sky
+  'linear-gradient(90deg,#60a5fa,#2563eb)',   // blue
+  'linear-gradient(90deg,#818cf8,#4f46e5)',   // indigo
+  'linear-gradient(90deg,#a78bfa,#7c3aed)',   // violet
+  'linear-gradient(90deg,#34d399,#059669)',   // emerald
+  'linear-gradient(90deg,#fb923c,#ea580c)',   // orange
+  'linear-gradient(90deg,#f472b6,#db2777)',   // pink
+];
+
 function renderGantt(p) {
   const { result, months } = p;
   const active = result
     .filter(c => c.status !== 'skipped')
-    .map(c => ({ name: c.name.replace(/<br>/g, ' '), lec: c.effective }));
+    .map(c => ({
+      name: c.name.replace(/<br>/g, ' ').replace(/& /g, '& ').replace(/& /g, '& '),
+      lec:  c.effective,
+    }));
 
   if (!active.length) { document.getElementById('gantt-chart').innerHTML = ''; return; }
 
   const monthNums = months.map(mo => mo.m);
   const numM      = monthNums.length;
-  const ROW_H     = 44;
+  const ROW_H     = 46;
 
-  // 커리큘럼별 시작/끝 월 위치(소수점) 계산
+  // 바 위치 계산 (커리큘럼별 시작/끝 월 컬럼 소수점)
   const bars = [];
   let localPos = 0;
   active.forEach((curr, idx) => {
@@ -886,36 +909,24 @@ function renderGantt(p) {
       }
       gPos += mo.contentLec;
     });
-    const leftPct  = (startCol ?? 0) / numM * 100;
-    const widthPct = ((endCol ?? numM) - (startCol ?? 0)) / numM * 100;
-    bars.push({ name: curr.name, leftPct, widthPct });
+    bars.push({
+      name:     curr.name,
+      leftPct:  (startCol ?? 0) / numM * 100,
+      widthPct: ((endCol ?? numM) - (startCol ?? 0)) / numM * 100,
+      color:    GANTT_COLORS[idx % GANTT_COLORS.length],
+    });
     localPos += curr.lec;
   });
 
-  // 색상 팔레트 (연→짙은 블루)
-  const COLORS = [
-    'linear-gradient(90deg,#93c5fd,#60a5fa)',
-    'linear-gradient(90deg,#60a5fa,#3b82f6)',
-    'linear-gradient(90deg,#3b82f6,#2563eb)',
-    'linear-gradient(90deg,#2563eb,#1d4ed8)',
-    'linear-gradient(90deg,#1d4ed8,#1e40af)',
-    'linear-gradient(90deg,#4f46e5,#4338ca)',
-    'linear-gradient(90deg,#6d28d9,#5b21b6)',
-  ];
-
   const totalH = bars.length * ROW_H;
-
   let html = `<div class="gantt-wrap"><div class="gantt-inner">`;
 
-  // 헤더 (월)
+  // 월 헤더
   html += `<div class="gantt-header">
     <div class="gantt-label-col-h"></div>
     <div class="gantt-month-headers" style="grid-template-columns:repeat(${numM},1fr);">`;
   monthNums.forEach(m => { html += `<div class="gantt-month-h">${m}월</div>`; });
-  html += `</div></div>`;
-
-  // 바디
-  html += `<div class="gantt-body">`;
+  html += `</div></div><div class="gantt-body">`;
 
   // 레이블 열
   html += `<div class="gantt-labels">`;
@@ -924,29 +935,42 @@ function renderGantt(p) {
   });
   html += `</div>`;
 
-  // 타임라인 영역
+  // 타임라인
   html += `<div class="gantt-timeline-area" style="height:${totalH}px;">`;
-  // 격자선
   html += `<div class="gantt-gridlines" style="grid-template-columns:repeat(${numM},1fr);">`;
   monthNums.forEach(() => { html += `<div class="gantt-gridline"></div>`; });
-  html += `</div>`;
-  // 바
-  html += `<div class="gantt-bars" style="height:${totalH}px;">`;
+  html += `</div><div class="gantt-bars" style="height:${totalH}px;">`;
   bars.forEach((b, i) => {
-    const top = i * ROW_H + 7;
-    const h   = ROW_H - 14;
-    html += `<div class="gantt-bar" style="
-      left:${b.leftPct}%; width:${b.widthPct}%;
-      top:${top}px; height:${h}px;
-      background:${COLORS[i % COLORS.length]};">
+    html += `<div class="gantt-bar" data-name="${b.name}" style="
+      left:${b.leftPct.toFixed(2)}%; width:${b.widthPct.toFixed(2)}%;
+      top:${i * ROW_H + 8}px; height:${ROW_H - 16}px;
+      background:${b.color};">
       <span>${b.name}</span>
     </div>`;
   });
-  html += `</div>`;
-  html += `</div>`; // timeline-area
+  html += `</div></div></div></div></div>`;
 
-  html += `</div></div></div>`; // body / inner / wrap
   document.getElementById('gantt-chart').innerHTML = html;
+
+  // 툴팁 설정
+  let tip = document.getElementById('gantt-tooltip');
+  if (!tip) {
+    tip = document.createElement('div');
+    tip.id = 'gantt-tooltip';
+    document.body.appendChild(tip);
+  }
+  const barsEl = document.querySelector('#gantt-chart .gantt-bars');
+  barsEl.addEventListener('mouseover', e => {
+    const bar = e.target.closest('.gantt-bar');
+    if (bar) { tip.textContent = bar.dataset.name; tip.style.display = 'block'; }
+  });
+  barsEl.addEventListener('mousemove', e => {
+    tip.style.left = (e.clientX + 14) + 'px';
+    tip.style.top  = (e.clientY - 40) + 'px';
+  });
+  barsEl.addEventListener('mouseout', e => {
+    if (!e.relatedTarget?.closest('.gantt-bar')) tip.style.display = 'none';
+  });
 }
 
 /* ── Stats ──────────────────────────────────── */
