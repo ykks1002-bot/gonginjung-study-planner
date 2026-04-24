@@ -595,19 +595,7 @@
 
     <!-- Monthly -->
     <div class="card" id="monthly-card">
-      <div class="results-header">
-        🗓️ 월별 학습 진도
-        <button onclick="downloadPDF(this)" style="
-          margin-left:auto; background:var(--blue); color:#fff;
-          border:none; border-radius:8px; padding:6px 14px;
-          font-size:.78rem; font-weight:700; cursor:pointer;
-          display:flex; align-items:center; gap:5px;
-          box-shadow:0 2px 6px rgba(37,99,235,.25); transition:all .2s;
-        " onmouseover="this.style.background='var(--blue-dark)'"
-           onmouseout="this.style.background='var(--blue)'">
-          ⬇ 계획 다운 받기
-        </button>
-      </div>
+      <div class="results-header">🗓️ 월별 학습 진도</div>
       <div class="mo-grid" id="mo-grid"></div>
       <div style="text-align:center; margin-top:18px;">
         <button id="save-plan-btn" onclick="saveMyPlanWithFeedback(this)" style="
@@ -621,15 +609,29 @@
   </div><!-- /results -->
 </div><!-- /wrap -->
 
-<div id="my-plan-btn" onclick="goMyPlan()" class="my-plan-btn" style="display:none;
+<div id="right-actions" style="
   position:fixed;
   right:max(12px, calc((100vw - 860px) / 2 - 148px));
   z-index:1000;
-  background:linear-gradient(135deg,#1e40af,#2563eb);
-  border-color:rgba(255,255,255,.6);
-  box-shadow:0 4px 16px rgba(37,99,235,.3);
-  align-self:unset;
+  display:flex; flex-direction:column; gap:8px; align-items:stretch;
   transition: top .1s;">
+  <div id="my-plan-btn" onclick="goMyPlan()" class="my-plan-btn" style="display:none;
+    background:linear-gradient(135deg,#1e40af,#2563eb);
+    border-color:rgba(255,255,255,.6);
+    box-shadow:0 4px 16px rgba(37,99,235,.3);
+    align-self:unset; position:static; min-width:130px;">
+  </div>
+  <button id="download-btn" onclick="downloadPDF(this)" style="display:none;
+    background:linear-gradient(135deg,#059669,#10b981);
+    color:#fff; border:2px solid rgba(255,255,255,.6);
+    border-radius:12px; padding:10px 14px;
+    font-size:.82rem; font-weight:700; cursor:pointer;
+    box-shadow:0 4px 16px rgba(16,185,129,.3);
+    transition:all .15s; text-align:center; min-width:130px;"
+    onmouseover="this.style.filter='brightness(1.1)'"
+    onmouseout="this.style.filter=''">
+    ⬇ 계획 다운 받기
+  </button>
 </div>
 
 <script>
@@ -865,6 +867,10 @@ function generate() {
   const el = document.getElementById('results');
   el.style.display = 'block';
   el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  const dlBtn = document.getElementById('download-btn');
+  if (dlBtn) dlBtn.style.display = 'block';
+  positionMyPlanBtn();
 }
 
 /* ── Gantt chart ────────────────────────────── */
@@ -1301,83 +1307,78 @@ function renderMonthly(p) {
   document.getElementById('mo-grid').innerHTML = html;
 }
 
-/* ── PDF 다운로드 (A4 1장) ───────────────────── */
+/* ── PDF 다운로드 (A4 1장, html2canvas 단일 캡처 → 한글 깨짐 없음) ── */
 async function downloadPDF(btn) {
-  const ganttEl   = document.getElementById('gantt-chart');
-  const monthlyEl = document.getElementById('monthly-card');
-  if (!ganttEl || !monthlyEl) return;
-
   const orig = btn.innerHTML;
   btn.innerHTML = '⏳ 생성 중...';
   btn.disabled = true;
 
   try {
-    const { jsPDF } = window.jspdf;
-    const A4_W = 210, A4_H = 297, MX = 10, MY = 8;
-    const cW = A4_W - MX * 2;   // 사용 가능 가로 190mm
-    const cH = A4_H - MY * 2;   // 사용 가능 세로 281mm
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const captureOpts = { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' };
-
-    // ── 제목 영역 (12mm) ──
-    const TITLE_H = 14;
-    pdf.setFillColor(37, 99, 235);
-    pdf.rect(MX, MY, cW, TITLE_H, 'F');
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(13);
-    pdf.setTextColor(255, 255, 255);
-    pdf.text('공인중개사 학습계획', A4_W / 2, MY + 6, { align: 'center' });
     const tLbl = { '1차': '1차', '2차': '2차', '1+2차': '동차' }[S.target] || S.target;
     const hLbl = S.hours >= 9 ? '8시간+' : S.hours + '시간';
-    pdf.setFontSize(8.5);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(`${tLbl}  ·  ${S.month}월 시작  ·  하루 ${hLbl}`, A4_W / 2, MY + 11, { align: 'center' });
 
-    let curY = MY + TITLE_H + 4;
-    const remaining = cH - TITLE_H - 4 - 6; // 푸터 6mm 제외
+    // ── 임시 인쇄용 컨테이너 생성 ──
+    const wrap = document.createElement('div');
+    wrap.style.cssText = `
+      position:fixed; left:-9999px; top:0;
+      width:780px; background:#fff;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+    `;
 
-    // ── Gantt 캡처 ──
-    const ganttCanvas = await html2canvas(ganttEl, captureOpts);
-    const ganttH_mm   = cW * (ganttCanvas.height / ganttCanvas.width);
+    // 제목 배너
+    wrap.innerHTML = `
+      <div style="background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;
+                  padding:14px 24px;text-align:center;">
+        <div style="font-size:17px;font-weight:800;margin-bottom:3px;">공인중개사 학습계획</div>
+        <div style="font-size:12px;opacity:.85;">${tLbl} &nbsp;·&nbsp; ${S.month}월 시작 &nbsp;·&nbsp; 하루 ${hLbl}</div>
+      </div>`;
 
-    // ── Monthly 캡처 (버튼 숨기고) ──
-    const moCanvas = await html2canvas(monthlyEl, {
-      ...captureOpts,
-      onclone: doc => {
-        const b1 = doc.querySelector('#monthly-card .results-header button');
-        if (b1) b1.style.display = 'none';
-        const b2 = doc.getElementById('save-plan-btn');
-        if (b2) b2.parentElement.style.display = 'none';
-      }
-    });
-    const moH_mm = cW * (moCanvas.height / moCanvas.width);
+    // 로드맵 섹션 (gantt 복제)
+    const ganttClone = document.getElementById('gantt-chart').cloneNode(true);
+    const ganttSec = document.createElement('div');
+    ganttSec.style.cssText = 'padding:14px 24px 8px;';
+    ganttSec.innerHTML = `<div style="font-size:13px;font-weight:700;color:#334155;
+      border-bottom:2px solid #e2e8f0;padding-bottom:8px;margin-bottom:10px;">
+      📚 추천 커리큘럼 학습로드맵</div>`;
+    ganttSec.appendChild(ganttClone);
+    wrap.appendChild(ganttSec);
 
-    // ── A4 1장에 맞춰 스케일 계산 ──
-    const totalNeed = ganttH_mm + 4 + moH_mm;
-    const scale     = totalNeed > remaining ? remaining / totalNeed : 1;
-    const gH  = ganttH_mm * scale;
-    const mH  = moH_mm   * scale;
-    const gW  = cW * scale;
-    const mW  = cW * scale;
-    const xOff = MX + (cW - gW) / 2; // 가운데 정렬
+    // 월별 진도 섹션 (mo-grid 복제)
+    const moClone = document.getElementById('mo-grid').cloneNode(true);
+    const moSec = document.createElement('div');
+    moSec.style.cssText = 'padding:10px 24px 16px;';
+    moSec.innerHTML = `<div style="font-size:13px;font-weight:700;color:#334155;
+      border-bottom:2px solid #e2e8f0;padding-bottom:8px;margin-bottom:10px;">
+      🗓️ 월별 학습 진도</div>`;
+    moSec.appendChild(moClone);
+    wrap.appendChild(moSec);
 
-    // 섹션 레이블
-    pdf.setFontSize(7.5);
-    pdf.setTextColor(80);
-    pdf.text('▎ 월별 커리큘럼 학습 로드맵', xOff, curY + 3.5);
-    curY += 5;
-    pdf.addImage(ganttCanvas.toDataURL('image/png'), 'PNG', xOff, curY, gW, gH);
-    curY += gH + 4;
-
-    pdf.text('▎ 월별 학습 진도', xOff, curY + 3.5);
-    curY += 5;
-    pdf.addImage(moCanvas.toDataURL('image/png'), 'PNG', xOff, curY, mW, mH);
-
-    // ── 푸터 ──
-    pdf.setFontSize(6.5);
-    pdf.setTextColor(170);
+    // 푸터
     const today = new Date().toLocaleDateString('ko-KR');
-    pdf.text(`생성일: ${today}  ·  공인중개사 학습계획 플래너`, A4_W / 2, A4_H - 4, { align: 'center' });
+    wrap.insertAdjacentHTML('beforeend', `
+      <div style="text-align:center;padding:8px;font-size:10px;color:#94a3b8;
+                  border-top:1px solid #e2e8f0;">
+        생성일: ${today} &nbsp;·&nbsp; 공인중개사 학습계획 플래너
+      </div>`);
+
+    document.body.appendChild(wrap);
+
+    // ── 단일 캡처 ──
+    const canvas = await html2canvas(wrap, {
+      scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff'
+    });
+    document.body.removeChild(wrap);
+
+    // ── A4에 맞게 배치 ──
+    const { jsPDF } = window.jspdf;
+    const A4_W = 210, A4_H = 297;
+    const imgW_mm = A4_W;
+    const imgH_mm = imgW_mm * (canvas.height / canvas.width);
+    const yOff = imgH_mm < A4_H ? (A4_H - imgH_mm) / 2 : 0;
+
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, yOff, imgW_mm,
+      Math.min(imgH_mm, A4_H));
 
     pdf.save(`공인중개사_학습계획_${tLbl}_${S.month}월시작.pdf`);
   } finally {
@@ -1400,12 +1401,12 @@ function saveMyPlanWithFeedback(btn) {
   }, 2000);
 }
 
-/* ── 나의 학습계획 버튼 스크롤 위치 제어 ── */
+/* ── 우측 고정 버튼들 스크롤 위치 제어 ── */
 function positionMyPlanBtn() {
-  const btn = document.getElementById('my-plan-btn');
-  if (!btn || btn.style.display === 'none') return;
+  const container = document.getElementById('right-actions');
+  if (!container) return;
   const bannerTop = document.querySelector('.exam-banner').getBoundingClientRect().top;
-  btn.style.top = Math.max(bannerTop + 8, 20) + 'px';
+  container.style.top = Math.max(bannerTop + 8, 20) + 'px';
 }
 window.addEventListener('scroll', positionMyPlanBtn);
 window.addEventListener('resize', positionMyPlanBtn);
