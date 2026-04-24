@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>공인중개사 학습계획 플래너</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     :root {
       --blue: #2563eb;
@@ -527,7 +529,7 @@
     </div>
 
     <!-- Curriculum roadmap -->
-    <div class="card">
+    <div class="card" id="roadmap-card">
       <div class="results-header">📚 추천 커리큘럼 학습 로드맵</div>
       <div id="curr-roadmap"></div>
     </div>
@@ -539,8 +541,20 @@
     </div>
 
     <!-- Monthly -->
-    <div class="card">
-      <div class="results-header">🗓️ 월별 학습 진도</div>
+    <div class="card" id="monthly-card">
+      <div class="results-header">
+        🗓️ 월별 학습 진도
+        <button onclick="downloadPDF(this)" style="
+          margin-left:auto; background:var(--blue); color:#fff;
+          border:none; border-radius:8px; padding:6px 14px;
+          font-size:.78rem; font-weight:700; cursor:pointer;
+          display:flex; align-items:center; gap:5px;
+          box-shadow:0 2px 6px rgba(37,99,235,.25); transition:all .2s;
+        " onmouseover="this.style.background='var(--blue-dark)'"
+           onmouseout="this.style.background='var(--blue)'">
+          ⬇ 계획 다운 받기
+        </button>
+      </div>
       <div class="mo-grid" id="mo-grid"></div>
       <div style="text-align:center; margin-top:18px;">
         <button id="save-plan-btn" onclick="saveMyPlanWithFeedback(this)" style="
@@ -1125,6 +1139,80 @@ function renderMonthly(p) {
   });
 
   document.getElementById('mo-grid').innerHTML = html;
+}
+
+/* ── PDF 다운로드 ────────────────────────────── */
+async function downloadPDF(btn) {
+  const roadmapEl = document.getElementById('roadmap-card');
+  const monthlyEl = document.getElementById('monthly-card');
+  if (!roadmapEl || !monthlyEl) return;
+
+  const orig = btn.textContent;
+  btn.textContent = '⏳ 생성 중...';
+  btn.disabled = true;
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const A4_W = 210, A4_H = 297, MARGIN = 10;
+    const contentW = A4_W - MARGIN * 2;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    // 제목
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(14);
+    pdf.setTextColor(37, 99, 235);
+    pdf.text('공인중개사 학습계획', A4_W / 2, MARGIN + 6, { align: 'center' });
+
+    const targetLbl = { '1차': '1차', '2차': '2차', '1+2차': '동차' };
+    const subTitle = `${targetLbl[S.target] || S.target}  ·  ${S.month}월 시작  ·  하루 ${S.hours >= 9 ? '8시간+' : S.hours + '시간'}`;
+    pdf.setFontSize(9);
+    pdf.setTextColor(100);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(subTitle, A4_W / 2, MARGIN + 12, { align: 'center' });
+
+    let cursorY = MARGIN + 18;
+
+    // 캡처 공통 옵션
+    const opts = { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' };
+
+    // ── 로드맵 ──
+    const rmCanvas = await html2canvas(roadmapEl, opts);
+    const rmRatio  = rmCanvas.height / rmCanvas.width;
+    const rmH      = contentW * rmRatio;
+    pdf.addImage(rmCanvas.toDataURL('image/png'), 'PNG', MARGIN, cursorY, contentW, rmH);
+    cursorY += rmH + 6;
+
+    // ── 페이지 부족 시 신규 페이지 ──
+    const moCanvas = await html2canvas(monthlyEl, { ...opts,
+      onclone: (doc) => {
+        // 다운로드 버튼 숨기기
+        const btnEl = doc.querySelector('#monthly-card .results-header button');
+        if (btnEl) btnEl.style.display = 'none';
+        // 저장 버튼 숨기기
+        const saveBtn = doc.getElementById('save-plan-btn');
+        if (saveBtn) saveBtn.closest('div').style.display = 'none';
+      }
+    });
+    const moRatio = moCanvas.height / moCanvas.width;
+    const moH     = contentW * moRatio;
+
+    if (cursorY + moH > A4_H - MARGIN) {
+      pdf.addPage();
+      cursorY = MARGIN;
+    }
+    pdf.addImage(moCanvas.toDataURL('image/png'), 'PNG', MARGIN, cursorY, contentW, moH);
+
+    // 날짜 푸터
+    pdf.setFontSize(7);
+    pdf.setTextColor(160);
+    const today = new Date().toLocaleDateString('ko-KR');
+    pdf.text(`생성일: ${today}  ·  공인중개사 학습계획 플래너`, A4_W / 2, A4_H - 4, { align: 'center' });
+
+    pdf.save(`공인중개사_학습계획_${S.month}월시작.pdf`);
+  } finally {
+    btn.textContent = orig;
+    btn.disabled = false;
+  }
 }
 
 function saveMyPlanWithFeedback(btn) {
