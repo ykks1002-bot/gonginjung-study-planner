@@ -554,16 +554,15 @@
   </div><!-- /results -->
 </div><!-- /wrap -->
 
-<!-- 나의 학습계획 바로가기: script 앞에 위치해야 페이지 로드 시 DOM에 존재 -->
 <div id="my-plan-btn" onclick="goMyPlan()" class="my-plan-btn" style="display:none;
   position:fixed;
-  top:140px;
   right:max(12px, calc((100vw - 860px) / 2 - 148px));
   z-index:1000;
   background:linear-gradient(135deg,#1e40af,#2563eb);
   border-color:rgba(255,255,255,.6);
   box-shadow:0 4px 16px rgba(37,99,235,.3);
-  align-self:unset;">
+  align-self:unset;
+  transition: top .1s;">
 </div>
 
 <script>
@@ -842,6 +841,7 @@ function updateMyPlanBtn() {
     <div class="mpb-tag">📋 나의 학습계획</div>
     <div class="mpb-val">${tLbl} · ${saved.month}월 · ${hLbl}</div>
     <div class="mpb-action">▶ 바로 보기</div>`;
+  positionMyPlanBtn();
 }
 
 function goMyPlan() {
@@ -1140,6 +1140,16 @@ function saveMyPlanWithFeedback(btn) {
     btn.disabled = false;
   }, 2000);
 }
+
+/* ── 나의 학습계획 버튼 스크롤 위치 제어 ── */
+function positionMyPlanBtn() {
+  const btn = document.getElementById('my-plan-btn');
+  if (!btn || btn.style.display === 'none') return;
+  const bannerTop = document.querySelector('.exam-banner').getBoundingClientRect().top;
+  btn.style.top = Math.max(bannerTop + 8, 20) + 'px';
+}
+window.addEventListener('scroll', positionMyPlanBtn);
+window.addEventListener('resize', positionMyPlanBtn);
 </script>
 
 </body>
