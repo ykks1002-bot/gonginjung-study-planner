@@ -863,7 +863,7 @@ function buildPlan() {
         sch.push({ name:'전 과정 최종 복습', pct:Math.round(cap/mo.contentLec*100), rev:true }); break;
       }
       if (seqActive[ci].openM > mo.m) {
-        sch.push({ name:'이전 과정 복습', pct:Math.round(cap/mo.contentLec*100), rev:true }); break;
+        sch.push({ name:'부족한 과목 복습', pct:Math.round(cap/mo.contentLec*100), rev:true }); break;
       }
       const take = Math.min(seqActive[ci].remaining, cap);
       const pct  = Math.round(take/mo.contentLec*100);
@@ -1365,7 +1365,7 @@ function buildDailyPlanData(p) {
         const curr = activeCurr[sp.currIdx];
         const curMo = cur.getMonth() + 1;
         if (curr.openMonth > curMo) {
-          lecLabel = '이전 과정 복습'; // 아직 오픈 전 → 복습
+          lecLabel = '부족한 과목 복습'; // 아직 오픈 전 → 복습
         } else {
           sp.dayInCurr++;
           lecLabel = curr.name;
