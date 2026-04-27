@@ -477,6 +477,7 @@
       background: var(--blue); color: #fff;
       padding: 9px 14px; font-weight: 700; font-size: .9rem;
       display: flex; justify-content: space-between; align-items: center;
+      gap: 8px;
     }
     .mo-head.exam-head { background: var(--red); }
     .mo-body { padding: 12px 14px; }
@@ -1287,7 +1288,7 @@ function renderMonthly(p) {
 
     html += `<div class="mo-card">
       <div class="${isExam ? 'mo-head exam-head' : 'mo-head'}">
-        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${m}월${isExam ? ' 🎯' : ''}${mainTag}</span>
+        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;">${m}월${isExam ? ' 🎯' : ''}${mainTag}</span>
         <span style="font-size:.75rem;opacity:.8;flex-shrink:0;">${isExam ? '시험일 10.31' : `학습 ${sd}일`}</span>
       </div>
       <div class="mo-body">
