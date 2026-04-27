@@ -1279,15 +1279,16 @@ function renderMonthly(p) {
     const items    = schedule || [];
     const isExam   = m === 10;
     const isPhase1 = S.target !== '1차' && m <= 5;
-    const mainItem = items.find(it => !it.rev) || items[0] || null;
-    const mainTag  = mainItem
+    const mainItem    = items.find(it => !it.rev) || null;
+    const mainTag     = mainItem
       ? `<span style="font-size:.7rem;background:rgba(255,255,255,.25);padding:2px 8px;
-           border-radius:10px;margin-left:6px;">${mainItem.name}</span>` : '';
+           border-radius:10px;margin-left:6px;white-space:nowrap;">${mainItem.name}</span>` : '';
+    const currItems   = items.filter(it => !it.rev); // 커리큘럼만
 
     html += `<div class="mo-card">
       <div class="${isExam ? 'mo-head exam-head' : 'mo-head'}">
-        <span>${m}월${isExam ? ' 🎯' : ''}${mainTag}</span>
-        <span style="font-size:.75rem;opacity:.8;">${isExam ? '시험일 10.31' : `학습 ${sd}일`}</span>
+        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${m}월${isExam ? ' 🎯' : ''}${mainTag}</span>
+        <span style="font-size:.75rem;opacity:.8;flex-shrink:0;">${isExam ? '시험일 10.31' : `학습 ${sd}일`}</span>
       </div>
       <div class="mo-body">
         <div class="mo-meta">하루 ${lpd}강 × ${ld}일(월~토) = 약 ${lec}강</div>
@@ -1295,13 +1296,11 @@ function renderMonthly(p) {
           📚 일요일 ${sun}회: ${isPhase1 ? '1차 과목 복습' : '부족한 과목 복습'}
         </div>`;
 
-    if (items.length > 0) {
-      items.forEach(it => {
-        const barColor = it.rev ? '#10b981' : 'var(--blue)';
-        const label    = it.rev ? `🔄 ${it.name}` : it.name;
+    if (currItems.length > 0) {
+      currItems.forEach(it => {
         html += `<div class="mo-item">
-          <div class="mo-item-label"><span>${label}</span><span>${it.pct}%</span></div>
-          <div class="pb-bg"><div class="pb" style="width:${it.pct}%;background:${barColor};"></div></div>
+          <div class="mo-item-label"><span>${it.name}</span><span>${it.pct}%</span></div>
+          <div class="pb-bg"><div class="pb" style="width:${it.pct}%"></div></div>
         </div>`;
       });
     } else {
