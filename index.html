@@ -650,6 +650,9 @@ const CURRS = [
   { seq:7, name:'동형모의고사',       pri:4, l1:24,  l2:40  },
 ];
 
+// 커리큘럼 오픈 월 (2026년 기준 / 0 = 이미 오픈)
+const CURR_OPEN = { 1:0, 2:1, 3:3, 4:6, 5:8, 6:9, 7:9 };
+
 const SUBJECTS = {
   '1차':   ['부동산학개론', '민법및민사특별법'],
   '2차':   ['공인중개사법령및실무', '부동산공법', '부동산공시법령', '부동산세법'],
@@ -843,6 +846,33 @@ function buildPlan() {
     ? effectiveTotal / totalCap : 1;
   months.forEach(mo => {
     mo.contentLec = Math.max(1, Math.round(mo.lec * contentRatio));
+  });
+
+  // 오픈 월 기반 월별 스케줄 계산
+  const seqActive = result
+    .filter(c => c.status !== 'skipped')
+    .sort((a, b) => a.seq - b.seq)
+    .map(c => ({ seq:c.seq, name:c.name.replace(/<br>/g,''), remaining:c.effective, openM:CURR_OPEN[c.seq]||0 }));
+  let ci = 0;
+  months.forEach(mo => {
+    while (ci < seqActive.length && seqActive[ci].remaining <= 0) ci++;
+    let cap = mo.contentLec;
+    const sch = [];
+    while (cap > 0) {
+      if (ci >= seqActive.length) {
+        sch.push({ name:'전 과정 최종 복습', pct:Math.round(cap/mo.contentLec*100), rev:true }); break;
+      }
+      if (seqActive[ci].openM > mo.m) {
+        sch.push({ name:'이전 과정 복습', pct:Math.round(cap/mo.contentLec*100), rev:true }); break;
+      }
+      const take = Math.min(seqActive[ci].remaining, cap);
+      const pct  = Math.round(take/mo.contentLec*100);
+      if (pct > 0) sch.push({ name:seqActive[ci].name, pct });
+      seqActive[ci].remaining -= take;
+      cap -= take;
+      if (seqActive[ci].remaining <= 0) ci++;
+    }
+    mo.schedule = sch;
   });
 
   return { totalDays, lecDays, capacity, totalNeeded, coveragePct, fullCount, result, months, lpd };
@@ -1243,39 +1273,16 @@ function renderWeekly(p) {
 function renderMonthly(p) {
   const { result, months, lpd } = p;
 
-  // 수강하는 커리큘럼 (커리큘럼 순서)
-  const active = result
-    .filter(c => c.status !== 'skipped')
-    .map(c => ({ name: c.name, lec: c.effective }));
-
-  let globalPos = 0;
   let html = '';
 
-  months.forEach(({ m, sd, ld, sun, lec, contentLec }) => {
-    const mStart = globalPos;
-    const mEnd   = globalPos + contentLec;
-
-    // 이번 달에 해당하는 커리큘럼 계산
-    let localPos = 0;
-    const items  = [];
-    for (const a of active) {
-      const cS = localPos;
-      const cE = localPos + a.lec;
-      if (cE > mStart && cS < mEnd) {
-        const ov  = Math.min(cE, mEnd) - Math.max(cS, mStart);
-        const pct = Math.round(ov / contentLec * 100);
-        items.push({ name: a.name, pct });
-      }
-      localPos += a.lec;
-    }
-
+  months.forEach(({ m, sd, ld, sun, lec, contentLec, schedule }) => {
+    const items    = schedule || [];
     const isExam   = m === 10;
-    // 1차 목표는 월 구분 없이 항상 부족과목 복습
     const isPhase1 = S.target !== '1차' && m <= 5;
-    const mainCurr = items.length > 0 ? items.reduce((a, b) => a.pct >= b.pct ? a : b) : null;
-    const mainTag  = mainCurr
+    const mainItem = items.find(it => !it.rev) || items[0] || null;
+    const mainTag  = mainItem
       ? `<span style="font-size:.7rem;background:rgba(255,255,255,.25);padding:2px 8px;
-           border-radius:10px;margin-left:6px;">${mainCurr.name.replace(/<br>/g, ' ')}</span>` : '';
+           border-radius:10px;margin-left:6px;">${mainItem.name}</span>` : '';
 
     html += `<div class="mo-card">
       <div class="${isExam ? 'mo-head exam-head' : 'mo-head'}">
@@ -1290,9 +1297,11 @@ function renderMonthly(p) {
 
     if (items.length > 0) {
       items.forEach(it => {
+        const barColor = it.rev ? '#10b981' : 'var(--blue)';
+        const label    = it.rev ? `🔄 ${it.name}` : it.name;
         html += `<div class="mo-item">
-          <div class="mo-item-label"><span>${it.name.replace(/<br>/g, ' ')}</span><span>${it.pct}%</span></div>
-          <div class="pb-bg"><div class="pb" style="width:${it.pct}%"></div></div>
+          <div class="mo-item-label"><span>${label}</span><span>${it.pct}%</span></div>
+          <div class="pb-bg"><div class="pb" style="width:${it.pct}%;background:${barColor};"></div></div>
         </div>`;
       });
     } else {
@@ -1300,7 +1309,6 @@ function renderMonthly(p) {
     }
 
     html += `</div></div>`;
-    globalPos += contentLec;
   });
 
   document.getElementById('mo-grid').innerHTML = html;
@@ -1314,9 +1322,11 @@ function buildDailyPlanData(p) {
 
   const activeCurr = result
     .filter(c => c.status !== 'skipped')
+    .sort((a, b) => a.seq - b.seq)
     .map(c => ({
       name: c.name.replace(/<br>/g, ''),
       daysPerSubj: Math.max(1, Math.round(c.effective / n / lpd)),
+      openMonth: CURR_OPEN[c.seq] || 0,
     }));
 
   const subjProg = Array.from({ length: n }, () => ({ currIdx: 0, dayInCurr: 0 }));
@@ -1353,9 +1363,14 @@ function buildDailyPlanData(p) {
       let lecLabel = '전 과정 완료';
       if (sp.currIdx < activeCurr.length) {
         const curr = activeCurr[sp.currIdx];
-        sp.dayInCurr++;
-        lecLabel = curr.name;
-        if (sp.dayInCurr >= curr.daysPerSubj) { sp.currIdx++; sp.dayInCurr = 0; }
+        const curMo = cur.getMonth() + 1;
+        if (curr.openMonth > curMo) {
+          lecLabel = '이전 과정 복습'; // 아직 오픈 전 → 복습
+        } else {
+          sp.dayInCurr++;
+          lecLabel = curr.name;
+          if (sp.dayInCurr >= curr.daysPerSubj) { sp.currIdx++; sp.dayInCurr = 0; }
+        }
       }
 
       dayData.subj     = subjs[subjIdx];
