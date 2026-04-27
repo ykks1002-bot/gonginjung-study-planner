@@ -1571,20 +1571,15 @@ async function downloadPDF(btn) {
         logging: false,
       });
       document.body.removeChild(mDiv);
-      // 가로 A4: [297, 210] 물리 landscape (좌표계 회전 없음)
-      const LS_W = 297, LS_H = 210, LS_M = 10;
-      pdf.addPage([LS_W, LS_H]);
-      const maxW = LS_W - LS_M * 2;
-      const maxH = LS_H - LS_M * 2;
-      let mImgW = maxW;
-      let mImgH = mImgW * (mCanvas.height / mCanvas.width);
-      if (mImgH > maxH) {
-        mImgH = maxH;
-        mImgW = mImgH * (mCanvas.width / mCanvas.height);
-      }
-      const mX = LS_M + (maxW - mImgW) / 2;
-      const mY = LS_M + (maxH - mImgH) / 2;
-      pdf.addImage(mCanvas.toDataURL('image/png'), 'PNG', mX, mY, mImgW, mImgH);
+      // 가로 A4 landscape
+      pdf.addPage('a4', 'l');
+      const LS_W = 297, LS_H = 210, LS_M = 12;
+      const imgW = LS_W - LS_M * 2;          // 좌우 여백 LS_M씩 동일
+      const imgH = imgW * (mCanvas.height / mCanvas.width);
+      const imgX = LS_M;                      // 좌 여백
+      const imgY = (LS_H - Math.min(imgH, LS_H - LS_M * 2)) / 2;
+      pdf.addImage(mCanvas.toDataURL('image/png'), 'PNG',
+        imgX, imgY, imgW, Math.min(imgH, LS_H - LS_M * 2));
     }
 
     pdf.save(`공인중개사_학습계획_${tLbl}_${S.month}월시작.pdf`);
