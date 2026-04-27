@@ -1280,20 +1280,17 @@ function renderMonthly(p) {
     const items    = schedule || [];
     const isExam   = m === 10;
     const isPhase1 = S.target !== '1차' && m <= 5;
-    const mainItem    = items.find(it => !it.rev) || null;
-    const mainTag     = mainItem
-      ? `<span style="font-size:.7rem;background:rgba(255,255,255,.25);padding:2px 6px;
-           border-radius:10px;margin-left:6px;
-           display:inline-block;vertical-align:middle;
-           max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${mainItem.name}</span>` : '';
-    const currItems   = items.filter(it => !it.rev); // 커리큘럼만
+    const mainItem  = items.find(it => !it.rev) || null;
+    const currItems = items.filter(it => !it.rev);
 
     html += `<div class="mo-card">
       <div class="${isExam ? 'mo-head exam-head' : 'mo-head'}">
-        <span style="display:flex;align-items:center;min-width:0;overflow:hidden;">
-          <span style="white-space:nowrap;flex-shrink:0;">${m}월${isExam ? ' 🎯' : ''}</span>${mainTag}
-        </span>
-        <span style="font-size:.75rem;opacity:.8;flex-shrink:0;white-space:nowrap;margin-left:4px;">${isExam ? '시험일 10.31' : `학습 ${sd}일`}</span>
+        <div style="display:flex;align-items:center;flex:1;min-width:0;overflow:hidden;gap:6px;">
+          <span style="flex-shrink:0;white-space:nowrap;">${m}월${isExam ? ' 🎯' : ''}</span>
+          ${mainItem ? `<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+            font-size:.7rem;background:rgba(255,255,255,.25);padding:2px 7px;border-radius:10px;">${mainItem.name}</span>` : ''}
+        </div>
+        <span style="font-size:.75rem;opacity:.8;flex-shrink:0;white-space:nowrap;">${isExam ? '시험일 10.31' : `학습 ${sd}일`}</span>
       </div>
       <div class="mo-body">
         <div class="mo-meta">하루 ${lpd}강 × ${ld}일(월~토) = 약 ${lec}강</div>
