@@ -1371,15 +1371,19 @@ function buildDailyPlanData(p) {
 
 /* ── 월별 학습계획표 HTML 렌더링 ── */
 function renderMonthTableHTML(monthNum, allDays) {
+  const W  = 756;          // 컨테이너 = 테이블 너비 (완전 일치)
+  const LW = 42;           // 구분 열
+  const DW = Math.floor((W - LW) / 7);  // 102px × 7 = 714 + 42 = 756 ✓
+
   const SUBJ_SHORT = {
     '부동산학개론':'학개론', '민법및민사특별법':'민법',
     '공인중개사법령및실무':'공인중개사법', '부동산공법':'공법',
     '부동산공시법령':'공시법령', '부동산세법':'세법',
   };
+
   const monthDays = allDays.filter(d => d.date.getMonth() + 1 === monthNum);
   if (!monthDays.length) return '';
 
-  // 주별 묶기 (일~토)
   const weeks = [];
   let week = Array(7).fill(null);
   monthDays.forEach(d => {
@@ -1390,24 +1394,23 @@ function renderMonthTableHTML(monthNum, allDays) {
 
   const tLbl = { '1차':'1차', '2차':'2차', '1+2차':'동차' }[S.target] || S.target;
   const DAY  = ['일','월','화','수','목','금','토'];
-  const T  = 'padding:3px 4px;border:1px solid #e2e8f0;text-align:center;font-size:7.5px;';
-  const TH = 'padding:5px 3px;border:1px solid #1e40af;text-align:center;font-size:8px;';
-  const LH = 'padding:3px 5px;border:1px solid #e2e8f0;font-weight:700;font-size:7.5px;background:#f8fafc;text-align:center;';
 
-  let h = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
-    padding:14px 16px;background:#fff;">
-    <h3 style="text-align:center;font-size:14px;font-weight:800;margin:0 0 3px;color:#1e293b;">
-      2026년 제37회 ${tLbl}목표 ${monthNum}월 학습계획
-    </h3>
-    <p style="text-align:center;font-size:9px;color:#64748b;margin:0 0 8px;font-style:italic;">
-      "배우고 때로 익히면 또한 기쁘지 아니한가" —공자
-    </p>
-    <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+  // 스타일 — 가로 padding 없음 (테이블이 정확히 W px 차지)
+  const FF  = '-apple-system,BlinkMacSystemFont,\'Segoe UI\',\'Apple SD Gothic Neo\',\'Noto Sans KR\',sans-serif';
+  const TD  = `padding:4px 2px;border:1px solid #e2e8f0;text-align:center;font-size:7.5px;overflow:hidden;`;
+  const TH  = `padding:6px 2px;border:1px solid #1e40af;text-align:center;font-size:8px;`;
+  const LH  = `padding:4px 2px;border:1px solid #e2e8f0;font-weight:700;font-size:7.5px;background:#f8fafc;text-align:center;`;
+
+  let h = `<div style="font-family:${FF};width:${W}px;background:#fff;padding:12px 0 0;margin:0;box-sizing:border-box;">
+    <div style="text-align:center;margin-bottom:8px;">
+      <div style="font-size:14px;font-weight:800;color:#1e293b;margin-bottom:3px;">2026년 제37회 ${tLbl}목표 ${monthNum}월 학습계획</div>
+      <div style="font-size:9px;color:#64748b;font-style:italic;">"배우고 때로 익히면 또한 기쁘지 아니한가" —공자</div>
+    </div>
+    <table style="width:${W}px;border-collapse:collapse;table-layout:fixed;">
       <colgroup>
-        <col style="width:42px;">`;
-  for (let i = 0; i < 7; i++) h += `<col style="width:102px;">`;
-  h += `</colgroup>
-      <thead><tr style="background:#1e3a8a;color:#fff;">
+        <col style="width:${LW}px;">`;
+  for (let i = 0; i < 7; i++) h += `<col style="width:${DW}px;">`;
+  h += `</colgroup><thead><tr style="background:#1e3a8a;color:#fff;">
         <th style="${TH}">구분</th>`;
   DAY.forEach((d, i) => {
     const c = i===0?'#fca5a5':i===6?'#93c5fd':'#fff';
@@ -1418,25 +1421,25 @@ function renderMonthTableHTML(monthNum, allDays) {
   weeks.forEach(wk => {
     // 날짜
     h += `<tr><td style="${LH}">날짜</td>`;
-    wk.forEach((d) => {
-      if (!d) { h += `<td style="${T}background:#f1f5f9;"></td>`; return; }
-      const c = d.dow===0?'color:#ef4444':d.dow===6?'color:#2563eb':'color:#1e293b';
-      h += `<td style="${T}${c};">${monthNum}월 ${String(d.date.getDate()).padStart(2,'0')}일</td>`;
+    wk.forEach(d => {
+      if (!d) { h += `<td style="${TD}background:#f1f5f9;"></td>`; return; }
+      const c = d.dow===0?'#ef4444':d.dow===6?'#2563eb':'#1e293b';
+      h += `<td style="${TD}color:${c};">${monthNum}월 ${String(d.date.getDate()).padStart(2,'0')}일</td>`;
     });
     h += `</tr>`;
     // 과목
     h += `<tr><td style="${LH}">과목</td>`;
     wk.forEach(d => {
-      if (!d) { h += `<td style="${T}background:#f1f5f9;"></td>`; return; }
+      if (!d) { h += `<td style="${TD}background:#f1f5f9;"></td>`; return; }
       const txt = d.dow===0 ? '복습' : (d.subj ? (SUBJ_SHORT[d.subj]||d.subj) : '');
-      h += `<td style="${T}background:${!txt?'#f1f5f9':'#fff'};">${txt}</td>`;
+      h += `<td style="${TD}background:${!txt?'#f1f5f9':'#fff'};">${txt}</td>`;
     });
     h += `</tr>`;
     // 강의
     h += `<tr><td style="${LH}">강의</td>`;
     wk.forEach(d => {
-      if (!d) { h += `<td style="${T}background:#f1f5f9;"></td>`; return; }
-      h += `<td style="${T}background:${!d.lecLabel?'#f1f5f9':'#fff'};font-size:7px;">${d.lecLabel||''}</td>`;
+      if (!d) { h += `<td style="${TD}background:#f1f5f9;"></td>`; return; }
+      h += `<td style="${TD}background:${!d.lecLabel?'#f1f5f9':'#fff'};font-size:7px;">${d.lecLabel||''}</td>`;
     });
     h += `</tr>`;
   });
@@ -1563,7 +1566,7 @@ async function downloadPDF(btn) {
       const monthHTML = renderMonthTableHTML(mn, dailyData);
       if (!monthHTML) continue;
       const mDiv = document.createElement('div');
-      mDiv.style.cssText = 'width:756px;background:#fff;margin:0;padding:0;';
+      mDiv.style.cssText = 'width:756px;background:#fff;margin:0;padding:0;display:inline-block;';
       document.body.appendChild(mDiv);
       mDiv.innerHTML = monthHTML;
       const mCanvas = await html2canvas(mDiv, {
