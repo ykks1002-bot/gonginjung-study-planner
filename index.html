@@ -789,17 +789,24 @@ function getLecturesForTarget(c, target) {
 
 function buildPlan() {
   const now        = new Date();
-  const curMonth   = now.getMonth() + 1;  // 현재 월 (1-indexed)
-  // 선택 월이 현재 월 이하면 오늘부터, 미래 월이면 해당 월 1일부터 시작
+  const curMonth   = now.getMonth() + 1;
   const startDate  = S.month <= curMonth
     ? new Date(now.getFullYear(), now.getMonth(), now.getDate())
     : new Date(2026, S.month - 1, 1);
   const totalDays  = Math.ceil((EXAM_DATE - startDate) / 864e5);
-  const lpd         = lecturesPerDay(S.hours);
+  const lpd        = lecturesPerDay(S.hours);
 
-  // 강의 수강은 월~토 (6일/주), 일요일은 복습
-  const lecDays  = Math.round(totalDays * 6 / 7);
-  const capacity = lecDays * lpd;
+  // 월별 데이터를 먼저 계산 → capacity를 월별 합산으로 구해 표시값과 일치
+  const months = [];
+  for (let m = S.month; m <= 10; m++) {
+    const sd  = allDaysInMonth(m);
+    const ld  = lectureDaysInMonth(m);
+    const sun = sd - ld;
+    const lec = ld * lpd;
+    months.push({ m, sd, ld, sun, lec });
+  }
+  const lecDays = months.reduce((s, mo) => s + mo.ld, 0);
+  const capacity = months.reduce((s, mo) => s + mo.lec, 0); // 월별 합산 = 표시값과 동일
 
   const totalNeeded = CURRS.reduce((s, c) => s + getLecturesForTarget(c, S.target), 0);
 
@@ -812,32 +819,18 @@ function buildPlan() {
   let rem = capacity;
   sorted.forEach(c => {
     if (rem >= c.needed) {
-      // 100% 완주 가능
       c.status = 'full'; c.effective = c.needed; rem -= c.needed;
     } else if (rem * 2 >= c.needed) {
-      // 50% 이상 수강 가능 → partial 포함, 잔여 용량 소진
       c.status = 'partial'; c.effective = rem; c.pct = Math.round(rem / c.needed * 100); rem = 0;
     } else {
-      // 50% 미만 → 제외하고 잔여 용량으로 다음 커리큘럼 시도
       c.status = 'skipped'; c.effective = 0;
     }
   });
 
-  // 커리큘럼 순서(seq) 기준으로 복원
   const result = CURRS.map(orig => sorted.find(c => c.seq === orig.seq));
 
   const coveragePct = Math.min(100, Math.round(capacity / totalNeeded * 100));
   const fullCount   = result.filter(c => c.status === 'full' || c.status === 'partial').length;
-
-  // 월별 데이터 (시작월 ~ 10월)
-  const months = [];
-  for (let m = S.month; m <= 10; m++) {
-    const sd  = allDaysInMonth(m);           // 전체 날수 (일요일 포함)
-    const ld  = lectureDaysInMonth(m);       // 강의 수강일 (월~토)
-    const sun = sd - ld;                     // 일요일 수 (복습일)
-    const lec = ld * lpd;                    // 해당 월 수강 강의수
-    months.push({ m, sd, ld, sun, lec });
-  }
 
   // 용량이 남을 경우 커리큘럼을 10월까지 고르게 배분
   // (매달 contentLec = 실제 커리큘럼 진도 단위, lec = 실제 수강 강의수)
