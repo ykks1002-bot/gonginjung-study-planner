@@ -1573,12 +1573,13 @@ async function downloadPDF(btn) {
       document.body.removeChild(mDiv);
       // 가로 A4 landscape
       pdf.addPage('a4', 'l');
-      const LS_W = 297, LS_H = 210;
-      // 가로/세로 모두 페이지 안에 맞도록 스케일 계산
-      let mImgW = LS_W;
+      const LS_W = 297, LS_H = 210, LS_M = 8; // 8mm 여백
+      const maxW = LS_W - LS_M * 2;
+      const maxH = LS_H - LS_M * 2;
+      let mImgW = maxW;
       let mImgH = mImgW * (mCanvas.height / mCanvas.width);
-      if (mImgH > LS_H) {
-        mImgH = LS_H;
+      if (mImgH > maxH) {
+        mImgH = maxH;
         mImgW = mImgH * (mCanvas.width / mCanvas.height);
       }
       pdf.addImage(mCanvas.toDataURL('image/png'), 'PNG',
