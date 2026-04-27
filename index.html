@@ -1354,7 +1354,7 @@ function buildDailyPlanData(p) {
       if (sp.currIdx < activeCurr.length) {
         const curr = activeCurr[sp.currIdx];
         sp.dayInCurr++;
-        lecLabel = `${curr.name} ${sp.dayInCurr}주차`;
+        lecLabel = curr.name;
         if (sp.dayInCurr >= curr.daysPerSubj) { sp.currIdx++; sp.dayInCurr = 0; }
       }
 
@@ -1402,9 +1402,13 @@ function renderMonthTableHTML(monthNum, allDays) {
     <p style="text-align:center;font-size:9px;color:#64748b;margin:0 0 8px;font-style:italic;">
       "배우고 때로 익히면 또한 기쁘지 아니한가" —공자
     </p>
-    <table style="width:100%;border-collapse:collapse;">
+    <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+      <colgroup>
+        <col style="width:38px;">`;
+  for (let i = 0; i < 7; i++) h += `<col style="width:calc((100% - 38px)/7);">`;
+  h += `</colgroup>
       <thead><tr style="background:#1e3a8a;color:#fff;">
-        <th style="${TH}width:38px;">구분</th>`;
+        <th style="${TH}">구분</th>`;
   DAY.forEach((d, i) => {
     const c = i===0?'#fca5a5':i===6?'#93c5fd':'#fff';
     h += `<th style="${TH}color:${c};">${d}</th>`;
@@ -1414,7 +1418,7 @@ function renderMonthTableHTML(monthNum, allDays) {
   weeks.forEach(wk => {
     // 날짜
     h += `<tr><td style="${LH}">날짜</td>`;
-    wk.forEach((d, i) => {
+    wk.forEach((d) => {
       if (!d) { h += `<td style="${T}background:#f1f5f9;"></td>`; return; }
       const c = d.dow===0?'color:#ef4444':d.dow===6?'color:#2563eb':'color:#1e293b';
       h += `<td style="${T}${c};">${monthNum}월 ${String(d.date.getDate()).padStart(2,'0')}일</td>`;
@@ -1433,13 +1437,6 @@ function renderMonthTableHTML(monthNum, allDays) {
     wk.forEach(d => {
       if (!d) { h += `<td style="${T}background:#f1f5f9;"></td>`; return; }
       h += `<td style="${T}background:${!d.lecLabel?'#f1f5f9':'#fff'};font-size:7px;">${d.lecLabel||''}</td>`;
-    });
-    h += `</tr>`;
-    // 공부방법
-    h += `<tr><td style="${LH}">공부방법</td>`;
-    wk.forEach(d => {
-      if (!d) { h += `<td style="${T}background:#f1f5f9;"></td>`; return; }
-      h += `<td style="${T}background:${!d.method?'#f1f5f9':'#fff'};font-size:6.5px;">${d.method||''}</td>`;
     });
     h += `</tr>`;
   });
