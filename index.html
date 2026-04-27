@@ -977,11 +977,13 @@ function renderGantt(p) {
   monthNums.forEach(() => { html += `<div class="gantt-gridline"></div>`; });
   html += `</div><div class="gantt-bars" style="height:${totalH}px;">`;
   bars.forEach((b, i) => {
+    // 바가 너무 좁으면 텍스트 숨김 (툴팁으로 확인 가능)
+    const showText = b.widthPct >= 14;
     html += `<div class="gantt-bar" data-name="${b.name}" style="
       left:${b.leftPct.toFixed(2)}%; width:${b.widthPct.toFixed(2)}%;
       top:${i * ROW_H + 8}px; height:${ROW_H - 16}px;
       background:${b.color};">
-      <span>${b.name}</span>
+      ${showText ? `<span>${b.name}</span>` : ''}
     </div>`;
   });
   html += `</div></div></div></div></div>`;
@@ -1282,15 +1284,17 @@ function renderMonthly(p) {
     const isPhase1 = S.target !== '1차' && m <= 5;
     const mainItem  = items.find(it => !it.rev) || null;
     const currItems = items.filter(it => !it.rev);
+    const BADGE_SHORT = {
+      '기초이론':'기초이론','기본이론':'기본이론',
+      '핵심이론&기출문제':'핵심&기출','기출변형문제풀이':'기출변형',
+      '단원별모의고사':'단원별','압축끝장100선':'압축끝장','동형모의고사':'동형모의',
+    };
+    const badgeTxt = mainItem ? (BADGE_SHORT[mainItem.name] || mainItem.name) : '';
 
     html += `<div class="mo-card">
       <div class="${isExam ? 'mo-head exam-head' : 'mo-head'}">
-        <div style="display:flex;align-items:center;flex:1;min-width:0;overflow:hidden;gap:6px;">
-          <span style="flex-shrink:0;white-space:nowrap;">${m}월${isExam ? ' 🎯' : ''}</span>
-          ${mainItem ? `<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-            font-size:.7rem;background:rgba(255,255,255,.25);padding:2px 7px;border-radius:10px;">${mainItem.name}</span>` : ''}
-        </div>
-        <span style="font-size:.75rem;opacity:.8;flex-shrink:0;white-space:nowrap;">${isExam ? '시험일 10.31' : `학습 ${sd}일`}</span>
+        <span style="white-space:nowrap;">${m}월${isExam ? ' 🎯' : ''}${badgeTxt ? `<span style="font-size:.7rem;background:rgba(255,255,255,.25);padding:2px 7px;border-radius:10px;margin-left:6px;">${badgeTxt}</span>` : ''}</span>
+        <span style="font-size:.75rem;opacity:.8;flex-shrink:0;white-space:nowrap;margin-left:4px;">${isExam ? '시험일 10.31' : `학습 ${sd}일`}</span>
       </div>
       <div class="mo-body">
         <div class="mo-meta">하루 ${lpd}강 × ${ld}일(월~토) = 약 ${lec}강</div>
