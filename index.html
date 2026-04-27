@@ -1306,10 +1306,152 @@ function renderMonthly(p) {
   document.getElementById('mo-grid').innerHTML = html;
 }
 
+/* ── 일일 학습계획표 데이터 빌드 ── */
+function buildDailyPlanData(p) {
+  const { result, lpd } = p;
+  const subjs = SUBJECTS[S.target];
+  const n = subjs.length;
+
+  const activeCurr = result
+    .filter(c => c.status !== 'skipped')
+    .map(c => ({
+      name: c.name.replace(/<br>/g, ''),
+      daysPerSubj: Math.max(1, Math.round(c.effective / n / lpd)),
+    }));
+
+  const subjProg = Array.from({ length: n }, () => ({ currIdx: 0, dayInCurr: 0 }));
+
+  const now = new Date();
+  const planStart = S.month <= now.getMonth() + 1
+    ? new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    : new Date(2026, S.month - 1, 1);
+
+  const days = [];
+  const cur  = new Date(2026, S.month - 1, 1);
+  const exam = new Date(2026, 9, 31);
+
+  while (cur <= exam) {
+    const dow     = cur.getDay();
+    const dayData = { date: new Date(cur), dow };
+
+    if (dow === 0) {
+      // 일요일: 복습
+      dayData.subj = null; dayData.lecLabel = ''; dayData.method = '교재복습';
+    } else if (cur < planStart) {
+      // 시작 전 공백
+      dayData.subj = null; dayData.lecLabel = ''; dayData.method = '';
+    } else {
+      // 강의일 (월~토)
+      const daysSince     = Math.floor((cur - planStart) / 864e5);
+      const weeksSince    = Math.floor(daysSince / 7);
+      const isAWeek       = weeksSince % 2 === 0;
+      const dayIdx        = dow - 1;                    // Mon=0..Sat=5
+      const offset        = n === 4 ? (isAWeek ? 0 : 2) : 0;
+      const subjIdx       = (dayIdx + offset) % n;
+      const sp            = subjProg[subjIdx];
+
+      let lecLabel = '전 과정 완료';
+      if (sp.currIdx < activeCurr.length) {
+        const curr = activeCurr[sp.currIdx];
+        sp.dayInCurr++;
+        lecLabel = `${curr.name} ${sp.dayInCurr}주차`;
+        if (sp.dayInCurr >= curr.daysPerSubj) { sp.currIdx++; sp.dayInCurr = 0; }
+      }
+
+      dayData.subj     = subjs[subjIdx];
+      dayData.lecLabel = lecLabel;
+      dayData.method   = dow === 6 ? '강의 수강 > 교재복습' : '강의 수강';
+    }
+
+    days.push(dayData);
+    cur.setDate(cur.getDate() + 1);
+  }
+  return days;
+}
+
+/* ── 월별 학습계획표 HTML 렌더링 ── */
+function renderMonthTableHTML(monthNum, allDays) {
+  const SUBJ_SHORT = {
+    '부동산학개론':'학개론', '민법및민사특별법':'민법',
+    '공인중개사법령및실무':'공인중개사법', '부동산공법':'공법',
+    '부동산공시법령':'공시법령', '부동산세법':'세법',
+  };
+  const monthDays = allDays.filter(d => d.date.getMonth() + 1 === monthNum);
+  if (!monthDays.length) return '';
+
+  // 주별 묶기 (일~토)
+  const weeks = [];
+  let week = Array(7).fill(null);
+  monthDays.forEach(d => {
+    week[d.dow] = d;
+    if (d.dow === 6) { weeks.push(week); week = Array(7).fill(null); }
+  });
+  if (week.some(x => x)) weeks.push(week);
+
+  const tLbl = { '1차':'1차', '2차':'2차', '1+2차':'동차' }[S.target] || S.target;
+  const DAY  = ['일','월','화','수','목','금','토'];
+  const T  = 'padding:3px 4px;border:1px solid #e2e8f0;text-align:center;font-size:7.5px;';
+  const TH = 'padding:5px 3px;border:1px solid #1e40af;text-align:center;font-size:8px;';
+  const LH = 'padding:3px 5px;border:1px solid #e2e8f0;font-weight:700;font-size:7.5px;background:#f8fafc;';
+
+  let h = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+    padding:14px 16px;background:#fff;">
+    <h3 style="text-align:center;font-size:14px;font-weight:800;margin:0 0 3px;color:#1e293b;">
+      2026년 제37회 ${tLbl}목표 ${monthNum}월 학습계획
+    </h3>
+    <p style="text-align:center;font-size:9px;color:#64748b;margin:0 0 8px;font-style:italic;">
+      "배우고 때로 익히면 또한 기쁘지 아니한가" —공자
+    </p>
+    <table style="width:100%;border-collapse:collapse;">
+      <thead><tr style="background:#1e3a8a;color:#fff;">
+        <th style="${TH}width:38px;">구분</th>`;
+  DAY.forEach((d, i) => {
+    const c = i===0?'#fca5a5':i===6?'#93c5fd':'#fff';
+    h += `<th style="${TH}color:${c};">${d}</th>`;
+  });
+  h += `</tr></thead><tbody>`;
+
+  weeks.forEach(wk => {
+    // 날짜
+    h += `<tr><td style="${LH}">날짜</td>`;
+    wk.forEach((d, i) => {
+      if (!d) { h += `<td style="${T}background:#f1f5f9;"></td>`; return; }
+      const c = d.dow===0?'color:#ef4444':d.dow===6?'color:#2563eb':'color:#1e293b';
+      h += `<td style="${T}${c};">${monthNum}월 ${String(d.date.getDate()).padStart(2,'0')}일</td>`;
+    });
+    h += `</tr>`;
+    // 과목
+    h += `<tr><td style="${LH}">과목</td>`;
+    wk.forEach(d => {
+      if (!d) { h += `<td style="${T}background:#f1f5f9;"></td>`; return; }
+      const txt = d.dow===0 ? '복습' : (d.subj ? (SUBJ_SHORT[d.subj]||d.subj) : '');
+      h += `<td style="${T}background:${!txt?'#f1f5f9':'#fff'};">${txt}</td>`;
+    });
+    h += `</tr>`;
+    // 강의
+    h += `<tr><td style="${LH}">강의</td>`;
+    wk.forEach(d => {
+      if (!d) { h += `<td style="${T}background:#f1f5f9;"></td>`; return; }
+      h += `<td style="${T}background:${!d.lecLabel?'#f1f5f9':'#fff'};font-size:7px;">${d.lecLabel||''}</td>`;
+    });
+    h += `</tr>`;
+    // 공부방법
+    h += `<tr><td style="${LH}">공부방법</td>`;
+    wk.forEach(d => {
+      if (!d) { h += `<td style="${T}background:#f1f5f9;"></td>`; return; }
+      h += `<td style="${T}background:${!d.method?'#f1f5f9':'#fff'};font-size:6.5px;">${d.method||''}</td>`;
+    });
+    h += `</tr>`;
+  });
+
+  h += `</tbody></table></div>`;
+  return h;
+}
+
 /* ── PDF 다운로드 (A4 1장, html2canvas 단일 캡처 → 한글 깨짐 없음) ── */
 async function downloadPDF(btn) {
   const orig = btn.innerHTML;
-  btn.innerHTML = '⏳ 생성 중...';
+  btn.innerHTML = '⏳ 생성 중... (1/2)';
   btn.disabled = true;
 
   try {
@@ -1418,6 +1560,26 @@ async function downloadPDF(btn) {
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, yOff, imgW_mm,
       Math.min(imgH_mm, A4_H));
+
+    // ── 3. 일일 학습계획표 (월별 페이지) ──
+    btn.innerHTML = '⏳ 생성 중... (2/2)';
+    const dailyData  = buildDailyPlanData(window._plan);
+    const planMonths = window._plan.months.map(m => m.m);
+    for (const mn of planMonths) {
+      const monthHTML = renderMonthTableHTML(mn, dailyData);
+      if (!monthHTML) continue;
+      const mDiv = document.createElement('div');
+      mDiv.style.cssText = 'position:fixed;left:-9999px;top:0;width:780px;background:#fff;';
+      mDiv.innerHTML = monthHTML;
+      document.body.appendChild(mDiv);
+      const mCanvas = await html2canvas(mDiv, { scale: 2, useCORS: true, backgroundColor: '#fff' });
+      document.body.removeChild(mDiv);
+      pdf.addPage();
+      const mW = A4_W;
+      const mH = mW * (mCanvas.height / mCanvas.width);
+      pdf.addImage(mCanvas.toDataURL('image/png'), 'PNG', 0,
+        mH < A4_H ? (A4_H - mH) / 2 : 0, mW, Math.min(mH, A4_H));
+    }
 
     pdf.save(`공인중개사_학습계획_${tLbl}_${S.month}월시작.pdf`);
   } finally {
