@@ -1545,9 +1545,6 @@ async function downloadPDF(btn) {
     // ── 단일 캡처 ──
     const canvas = await html2canvas(wrap, {
       scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff',
-      width: 780, height: wrap.offsetHeight,
-      x: 0, y: 0, scrollX: 0, scrollY: 0,
-      windowWidth: 780, windowHeight: wrap.offsetHeight,
     });
     document.body.removeChild(p1overlay);
 
@@ -1580,9 +1577,6 @@ async function downloadPDF(btn) {
       void mDiv.offsetHeight; // force layout
       const mCanvas = await html2canvas(mDiv, {
         scale: 2, useCORS: true, backgroundColor: '#fff',
-        width: 1100, height: mDiv.offsetHeight,
-        x: 0, y: 0, scrollX: 0, scrollY: 0,
-        windowWidth: 1100, windowHeight: mDiv.offsetHeight,
       });
       document.body.removeChild(overlay);
       // 가로 A4 (297×210mm)
