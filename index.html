@@ -1571,9 +1571,9 @@ async function downloadPDF(btn) {
         logging: false,
       });
       document.body.removeChild(mDiv);
-      // 가로 A4 landscape
-      pdf.addPage('a4', 'l');
-      const LS_W = 297, LS_H = 210, LS_M = 8; // 8mm 여백
+      // 가로 A4: [297, 210] 물리 landscape (좌표계 회전 없음)
+      const LS_W = 297, LS_H = 210, LS_M = 10;
+      pdf.addPage([LS_W, LS_H]);
       const maxW = LS_W - LS_M * 2;
       const maxH = LS_H - LS_M * 2;
       let mImgW = maxW;
@@ -1582,8 +1582,9 @@ async function downloadPDF(btn) {
         mImgH = maxH;
         mImgW = mImgH * (mCanvas.width / mCanvas.height);
       }
-      pdf.addImage(mCanvas.toDataURL('image/png'), 'PNG',
-        (LS_W - mImgW) / 2, (LS_H - mImgH) / 2, mImgW, mImgH);
+      const mX = LS_M + (maxW - mImgW) / 2;
+      const mY = LS_M + (maxH - mImgH) / 2;
+      pdf.addImage(mCanvas.toDataURL('image/png'), 'PNG', mX, mY, mImgW, mImgH);
     }
 
     pdf.save(`공인중개사_학습계획_${tLbl}_${S.month}월시작.pdf`);
