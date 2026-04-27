@@ -918,6 +918,7 @@ function renderGantt(p) {
 
   if (!months.length) { document.getElementById('gantt-chart').innerHTML = ''; return; }
 
+  const monthNums = months.map(mo => mo.m);
   const numM = months.length;
   const ROW_H = 46;
 
