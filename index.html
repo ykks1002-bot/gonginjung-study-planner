@@ -915,43 +915,42 @@ const GANTT_COLORS = [
 
 function renderGantt(p) {
   const { result, months } = p;
-  const active = result
-    .filter(c => c.status !== 'skipped')
-    .map(c => ({
-      name: c.name.replace(/<br>/g, ''),
-      lec:  c.effective,
-    }));
 
-  if (!active.length) { document.getElementById('gantt-chart').innerHTML = ''; return; }
+  if (!months.length) { document.getElementById('gantt-chart').innerHTML = ''; return; }
 
-  const monthNums = months.map(mo => mo.m);
-  const numM      = monthNums.length;
-  const ROW_H     = 46;
+  const numM = months.length;
+  const ROW_H = 46;
 
-  // 바 위치 계산 (커리큘럼별 시작/끝 월 컬럼 소수점)
-  const bars = [];
-  let localPos = 0;
-  active.forEach((curr, idx) => {
-    const cS = localPos, cE = localPos + curr.lec;
-    let startCol = null, endCol = null;
-    let gPos = 0;
-    months.forEach((mo, mi) => {
-      const mS = gPos, mE = gPos + mo.contentLec;
-      if (cE > mS && cS < mE) {
-        if (startCol === null)
-          startCol = mi + (Math.max(cS, mS) - mS) / mo.contentLec;
-        endCol = mi + (Math.min(cE, mE) - mS) / mo.contentLec;
+  // mo.schedule 기반으로 바 위치 추출 (월별 학습진도와 완전 동기화)
+  const barsMap = new Map(); // name → { mi, startFrac, endMi, endFrac, colorIdx }
+  let colorIdx  = 0;
+  months.forEach((mo, mi) => {
+    let cumFrac = 0;
+    (mo.schedule || []).forEach(item => {
+      const f = item.pct / 100;
+      if (!item.rev) {
+        if (!barsMap.has(item.name)) {
+          barsMap.set(item.name, { mi, startFrac: cumFrac, endMi: mi, endFrac: cumFrac + f, colorIdx: colorIdx++ });
+        } else {
+          const b = barsMap.get(item.name);
+          b.endMi   = mi;
+          b.endFrac = cumFrac + f;
+        }
       }
-      gPos += mo.contentLec;
+      cumFrac += f;
     });
-    bars.push({
-      name:     curr.name,
-      leftPct:  (startCol ?? 0) / numM * 100,
-      widthPct: ((endCol ?? numM) - (startCol ?? 0)) / numM * 100,
-      color:    GANTT_COLORS[idx % GANTT_COLORS.length],
-    });
-    localPos += curr.lec;
   });
+
+  const bars = [];
+  barsMap.forEach(({ mi, startFrac, endMi, endFrac, colorIdx: ci }, name) => {
+    bars.push({
+      name,
+      leftPct:  (mi + startFrac) / numM * 100,
+      widthPct: (endMi + endFrac - mi - startFrac) / numM * 100,
+      color:    GANTT_COLORS[ci % GANTT_COLORS.length],
+    });
+  });
+  bars.sort((a, b) => a.leftPct - b.leftPct);
 
   const totalH = bars.length * ROW_H;
   let html = `<div class="gantt-wrap"><div class="gantt-inner">`;
@@ -1314,24 +1313,17 @@ function renderMonthly(p) {
   document.getElementById('mo-grid').innerHTML = html;
 }
 
-/* ── 일일 학습계획표 데이터 빌드 ── */
+/* ── 일일 학습계획표 데이터 빌드 (mo.schedule 기반 — 월별 학습진도와 완전 동기화) ── */
 function buildDailyPlanData(p) {
-  const { result, lpd } = p;
+  const { months } = p;
   const subjs = SUBJECTS[S.target];
-  const n = subjs.length;
+  const n     = subjs.length;
 
-  const activeCurr = result
-    .filter(c => c.status !== 'skipped')
-    .sort((a, b) => a.seq - b.seq)
-    .map(c => ({
-      name: c.name.replace(/<br>/g, ''),
-      daysPerSubj: Math.max(1, Math.round(c.effective / n / lpd)),
-      openMonth: CURR_OPEN[c.seq] || 0,
-    }));
+  // 월별 스케줄 맵
+  const moMap = {};
+  months.forEach(mo => { moMap[mo.m] = mo; });
 
-  const subjProg = Array.from({ length: n }, () => ({ currIdx: 0, dayInCurr: 0 }));
-
-  const now = new Date();
+  const now       = new Date();
   const planStart = S.month <= now.getMonth() + 1
     ? new Date(now.getFullYear(), now.getMonth(), now.getDate())
     : new Date(2026, S.month - 1, 1);
@@ -1345,31 +1337,40 @@ function buildDailyPlanData(p) {
     const dayData = { date: new Date(cur), dow };
 
     if (dow === 0) {
-      // 일요일: 복습
       dayData.subj = null; dayData.lecLabel = ''; dayData.method = '교재복습';
     } else if (cur < planStart) {
-      // 시작 전 공백
       dayData.subj = null; dayData.lecLabel = ''; dayData.method = '';
     } else {
-      // 강의일 (월~토)
-      const daysSince     = Math.floor((cur - planStart) / 864e5);
-      const weeksSince    = Math.floor(daysSince / 7);
-      const isAWeek       = weeksSince % 2 === 0;
-      const dayIdx        = dow - 1;                    // Mon=0..Sat=5
-      const offset        = n === 4 ? (isAWeek ? 0 : 2) : 0;
-      const subjIdx       = (dayIdx + offset) % n;
-      const sp            = subjProg[subjIdx];
+      // 과목 로테이션
+      const daysSince  = Math.floor((cur - planStart) / 864e5);
+      const isAWeek    = Math.floor(daysSince / 7) % 2 === 0;
+      const dayIdx     = dow - 1;
+      const offset     = n === 4 ? (isAWeek ? 0 : 2) : 0;
+      const subjIdx    = (dayIdx + offset) % n;
 
-      let lecLabel = '전 과정 완료';
-      if (sp.currIdx < activeCurr.length) {
-        const curr = activeCurr[sp.currIdx];
-        const curMo = cur.getMonth() + 1;
-        if (curr.openMonth > curMo) {
-          lecLabel = '부족한 과목 복습'; // 아직 오픈 전 → 복습
-        } else {
-          sp.dayInCurr++;
-          lecLabel = curr.name;
-          if (sp.dayInCurr >= curr.daysPerSubj) { sp.currIdx++; sp.dayInCurr = 0; }
+      // 이번 달 몇 번째 강의일인지 계산 (월 1일 기준)
+      let lecDayInMonth = 0;
+      for (let d = 1; d <= cur.getDate(); d++) {
+        if (new Date(cur.getFullYear(), cur.getMonth(), d).getDay() !== 0) lecDayInMonth++;
+      }
+
+      // mo.schedule로 커리큘럼 결정
+      const mo = moMap[cur.getMonth() + 1];
+      let lecLabel = '전 과정 복습';
+      if (mo && mo.schedule && mo.ld > 0) {
+        const pos = lecDayInMonth / mo.ld; // 0~1 비율
+        let cum = 0;
+        for (const item of mo.schedule) {
+          cum += item.pct / 100;
+          if (pos <= cum + 0.001) {
+            lecLabel = item.rev ? '부족한 과목 복습' : item.name;
+            break;
+          }
+        }
+        // 마지막 항목 보정
+        if (lecLabel === '전 과정 복습' && mo.schedule.length) {
+          const last = mo.schedule[mo.schedule.length - 1];
+          lecLabel = last.rev ? '부족한 과목 복습' : last.name;
         }
       }
 
