@@ -1446,16 +1446,16 @@ function renderMonthTableHTML(monthNum, allDays) {
   h += `</tr></thead><tbody>`;
 
   weeks.forEach(wk => {
-    // 날짜 행
-    h += `<tr><td style="${LH}">날짜</td>`;
+    // 날짜 행 (배경색으로 구분)
+    const TRDATE = 'background:#f0f4ff;';
+    h += `<tr><td style="${LH}${TRDATE}">날짜</td>`;
     wk.forEach(d => {
       if (!d) { h += `<td style="${TD}background:#f1f5f9;"></td>`; return; }
       const app  = isAppDay(d);
       const exam = isExamDay(d);
-      const bg   = app  ? 'background:#dbeafe;' : exam ? 'background:#fef9c3;' : '';
-      const col  = app  ? '#1d4ed8' : d.dow===0 ? '#ef4444' : d.dow===6 ? '#2563eb' : '#1e293b';
-      const fw   = app  ? 'font-weight:700;' : '';
-      h += `<td style="${TD}${bg}color:${col};${fw}">${monthNum}월 ${String(d.date.getDate()).padStart(2,'0')}일</td>`;
+      const bg   = app  ? 'background:#dbeafe;' : exam ? 'background:#fef9c3;' : 'background:#f0f4ff;';
+      const col  = app  ? '#1d4ed8' : d.dow===0 ? '#ef4444' : d.dow===6 ? '#1d4ed8' : '#1e3a8a';
+      h += `<td style="${TD}${bg}color:${col};font-weight:700;">${monthNum}월 ${d.date.getDate()}일</td>`;
     });
     h += `</tr>`;
 
