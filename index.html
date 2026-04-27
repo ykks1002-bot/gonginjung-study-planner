@@ -1402,10 +1402,10 @@ function renderMonthTableHTML(monthNum, allDays) {
     <p style="text-align:center;font-size:9px;color:#64748b;margin:0 0 8px;font-style:italic;">
       "배우고 때로 익히면 또한 기쁘지 아니한가" —공자
     </p>
-    <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+    <table style="width:1068px;border-collapse:collapse;table-layout:fixed;">
       <colgroup>
-        <col style="width:38px;">`;
-  for (let i = 0; i < 7; i++) h += `<col style="width:calc((100% - 38px)/7);">`;
+        <col style="width:48px;">`;
+  for (let i = 0; i < 7; i++) h += `<col style="width:145px;">`;
   h += `</colgroup>
       <thead><tr style="background:#1e3a8a;color:#fff;">
         <th style="${TH}">구분</th>`;
@@ -1457,11 +1457,7 @@ async function downloadPDF(btn) {
 
     // ── 임시 인쇄용 컨테이너 생성 ──
     const wrap = document.createElement('div');
-    wrap.style.cssText = `
-      position:absolute; left:0; top:-9999px;
-      width:780px; background:#fff;
-      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
-    `;
+    wrap.style.cssText = 'width:780px;background:#fff;';
 
     // 제목 배너
     wrap.innerHTML = `
@@ -1539,14 +1535,21 @@ async function downloadPDF(btn) {
         생성일: ${today} &nbsp;·&nbsp; 공인중개사 학습계획 플래너
       </div>`);
 
-    document.body.appendChild(wrap);
+    const p1overlay = document.createElement('div');
+    p1overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#fff;overflow:hidden;';
+    document.body.appendChild(p1overlay);
+    wrap.style.cssText = 'position:absolute;top:0;left:0;width:780px;background:#fff;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',\'Apple SD Gothic Neo\',\'Noto Sans KR\',sans-serif;';
+    p1overlay.appendChild(wrap);
+    void wrap.offsetHeight;
 
     // ── 단일 캡처 ──
     const canvas = await html2canvas(wrap, {
       scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff',
-      width: 780, windowWidth: 900,
+      width: 780, height: wrap.offsetHeight,
+      x: 0, y: 0, scrollX: 0, scrollY: 0,
+      windowWidth: 780, windowHeight: wrap.offsetHeight,
     });
-    document.body.removeChild(wrap);
+    document.body.removeChild(p1overlay);
 
     // ── A4에 맞게 배치 ──
     const { jsPDF } = window.jspdf;
@@ -1566,15 +1569,22 @@ async function downloadPDF(btn) {
     for (const mn of planMonths) {
       const monthHTML = renderMonthTableHTML(mn, dailyData);
       if (!monthHTML) continue;
+      // 오버레이 위에 렌더링 → html2canvas가 항상 전체 너비 캡처
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#fff;overflow:hidden;';
+      document.body.appendChild(overlay);
       const mDiv = document.createElement('div');
-      mDiv.style.cssText = 'position:absolute;left:0;top:-9999px;width:1100px;background:#fff;';
-      document.body.appendChild(mDiv);
+      mDiv.style.cssText = 'position:absolute;top:0;left:0;width:1100px;background:#fff;';
       mDiv.innerHTML = monthHTML;
+      overlay.appendChild(mDiv);
+      void mDiv.offsetHeight; // force layout
       const mCanvas = await html2canvas(mDiv, {
         scale: 2, useCORS: true, backgroundColor: '#fff',
-        width: 1100, windowWidth: 1200,
+        width: 1100, height: mDiv.offsetHeight,
+        x: 0, y: 0, scrollX: 0, scrollY: 0,
+        windowWidth: 1100, windowHeight: mDiv.offsetHeight,
       });
-      document.body.removeChild(mDiv);
+      document.body.removeChild(overlay);
       // 가로 A4 (297×210mm)
       const LS_W = 297, LS_H = 210;
       pdf.addPage([LS_W, LS_H]);
