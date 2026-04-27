@@ -769,7 +769,7 @@ function updateHoursHint() {
 
 /* ═══════════════════ CALC ════════════════════ */
 // 1강 ≈ 60분 → 하루 N시간 = 약 N강 (학습 시간을 넘지 않음)
-function lecturesPerDay(h) { return h; }
+function lecturesPerDay(h) { return Math.max(1, h - 1); }
 
 // 한 달의 전체 날수 (일요일 포함, 모든 날 학습)
 function allDaysInMonth(month) {
@@ -986,12 +986,12 @@ function renderGantt(p) {
 
 /* ── Stats ──────────────────────────────────── */
 function renderStats(p) {
-  const { totalDays, capacity, totalNeeded, coveragePct, fullCount } = p;
+  const { totalDays, capacity, totalNeeded, coveragePct, fullCount, lpd } = p;
   const hDisp = S.hours >= 9 ? '8h+' : S.hours + 'h';
   document.getElementById('stat-grid').innerHTML = [
     { val: totalDays + '일',      lbl: '총 학습 기간'       },
     { val: hDisp,                 lbl: '하루 학습 시간'      },
-    { val: '약 ' + S.hours + '강', lbl: '하루 수강<br>강의수'   },
+    { val: '약 ' + lpd + '강',    lbl: '하루 수강<br>강의수'   },
     { val: Math.min(capacity, totalNeeded) + '강', lbl: '수강 가능<br>총 강의'  },
     { val: totalNeeded + '강',       lbl: '전체 커리큘럼 강의'   },
     { val: fullCount + '/7',         lbl: '완주 가능<br>과정수'  },
