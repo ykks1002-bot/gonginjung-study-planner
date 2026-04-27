@@ -1454,7 +1454,7 @@ function renderMonthTableHTML(monthNum, allDays) {
       const app  = isAppDay(d);
       const exam = isExamDay(d);
       const bg   = app  ? 'background:#dbeafe;' : exam ? 'background:#fef9c3;' : 'background:#f0f4ff;';
-      const col  = app  ? '#1d4ed8' : d.dow===0 ? '#ef4444' : d.dow===6 ? '#1d4ed8' : '#1e3a8a';
+      const col  = app  ? '#1d4ed8' : d.dow===0 ? '#ef4444' : d.dow===6 ? '#0369a1' : '#374151';
       h += `<td style="${TD}${bg}color:${col};font-weight:700;">${monthNum}월 ${d.date.getDate()}일</td>`;
     });
     h += `</tr>`;
