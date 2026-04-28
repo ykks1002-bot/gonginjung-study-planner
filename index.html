@@ -1221,16 +1221,9 @@ function renderWeekly(p) {
       <td style="font-weight:700;font-size:.8rem;color:var(--blue);white-space:nowrap;">${row.label}</td>`;
     row.schedule.forEach(slot => {
       if (slot.isReview) {
-        if (S.target === '1차') {
-          html += `<td class="sun-td">
-            <span class="stag sun-2">부족과목</span>
-          </td>`;
-        } else {
-          html += `<td class="sun-td">
-            <span class="stag sun-1" style="display:block;margin-bottom:2px;">~5월</span>
-            <span class="stag sun-2">6월~</span>
-          </td>`;
-        }
+        html += `<td class="sun-td">
+          <span class="stag sun-2">부족과목</span>
+        </td>`;
       } else {
         const short = SHORT[slot.subj] || slot.subj;
         html += `<td>
@@ -1244,23 +1237,13 @@ function renderWeekly(p) {
 
   html += `</tbody></table></div>`;
 
-  // 일요일 복습 설명 (목표에 따라 구분)
-  if (S.target === '1차') {
-    html += `<div class="sun-phase-box">
-      <strong>📚 일요일 복습 방식</strong>
-      <div class="phase-tags">
-        <span class="phase-tag phase-tag-2">매주 일요일: 부족한 과목 집중 복습</span>
-      </div>
-    </div>`;
-  } else {
-    html += `<div class="sun-phase-box">
-      <strong>📚 일요일 복습 방식</strong>
-      <div class="phase-tags">
-        <span class="phase-tag phase-tag-1">1월~5월: 1차 과목 복습 (부동산학개론·민법)</span>
-        <span class="phase-tag phase-tag-2">6월~10월: 부족한 과목 집중 복습</span>
-      </div>
-    </div>`;
-  }
+  // 일요일 복습 설명
+  html += `<div class="sun-phase-box">
+    <strong>📚 일요일 복습 방식</strong>
+    <div class="phase-tags">
+      <span class="phase-tag phase-tag-2">매주 일요일: 부족한 과목 집중 복습</span>
+    </div>
+  </div>`;
 
   const noteText = n === 4
     ? 'A·B주를 격주로 반복합니다. 4과목이 2주 동안 각 3일씩 균등 배분됩니다.'
@@ -1281,7 +1264,6 @@ function renderMonthly(p) {
   months.forEach(({ m, sd, ld, sun, lec, contentLec, schedule }) => {
     const items    = schedule || [];
     const isExam   = m === 10;
-    const isPhase1 = S.target !== '1차' && m <= 5;
     const mainItem  = items.find(it => !it.rev) || null;
     const currItems = items.filter(it => !it.rev);
     const BADGE_SHORT = {
@@ -1298,8 +1280,8 @@ function renderMonthly(p) {
       </div>
       <div class="mo-body">
         <div class="mo-meta">하루 ${lpd}강 × ${ld}일(월~토) = 약 ${lec}강</div>
-        <div class="mo-sun ${isPhase1 ? 'phase1' : 'phase2'}">
-          📚 일요일 ${sun}회: ${isPhase1 ? '1차 과목 복습' : '부족한 과목 복습'}
+        <div class="mo-sun phase2">
+          📚 일요일 ${sun}회: 부족한 과목 복습
         </div>`;
 
     if (currItems.length > 0) {
