@@ -1398,6 +1398,8 @@ function renderMonthTableHTML(monthNum, allDays) {
 
   const isExamDay = d => d && d.date.getFullYear()===2026 && d.date.getMonth()===9  && d.date.getDate()===31;
   const isAppDay  = d => d && d.date.getFullYear()===2026 && d.date.getMonth()===7  && d.date.getDate()>=3 && d.date.getDate()<=7;
+  const todayMid  = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
+  const isPast    = d => d && d.date < todayMid;
 
   const monthDays = allDays.filter(d => d.date.getMonth() + 1 === monthNum);
   if (!monthDays.length) return '';
@@ -1455,7 +1457,7 @@ function renderMonthTableHTML(monthNum, allDays) {
         h += `<td rowspan="2" style="${TD}background:#fef3c7;font-weight:700;color:#92400e;vertical-align:middle;font-size:8px;">🎯 제37회 시험일</td>`;
         return;
       }
-      const txt = d.dow===0 ? '복습' : (d.subj ? (SUBJ_SHORT[d.subj]||d.subj) : '');
+      const txt = isPast(d) ? '' : (d.dow===0 ? '복습' : (d.subj ? (SUBJ_SHORT[d.subj]||d.subj) : ''));
       h += `<td style="${TD}background:${!txt?'#f1f5f9':'#fff'};">${txt}</td>`;
     });
     h += `</tr>`;
@@ -1465,7 +1467,8 @@ function renderMonthTableHTML(monthNum, allDays) {
     wk.forEach(d => {
       if (!d) { h += `<td style="${TD}background:#f1f5f9;"></td>`; return; }
       if (isExamDay(d)) return;
-      h += `<td style="${TD}background:${!d.lecLabel?'#f1f5f9':'#fff'};font-size:7px;">${d.lecLabel||''}</td>`;
+      const lec = isPast(d) ? '' : (d.lecLabel || '');
+      h += `<td style="${TD}background:${!lec?'#f1f5f9':'#fff'};font-size:7px;">${lec}</td>`;
     });
     h += `</tr>`;
   });
