@@ -703,6 +703,12 @@ const SHORT = {
 const S = { target: null, month: null, startDate: null, hours: null };
 const MY_PLAN_KEY = 'gjp_my_plan';
 
+/* ── 달력 변수 ── */
+let calYear  = TODAY.getFullYear();
+let calMonth = TODAY.getMonth();
+const CAL_MIN = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
+const CAL_MAX = new Date(2026, 7, 31); // 8월 31일
+
 /* ═══════════════════ INIT ════════════════════ */
 (function init() {
   // D-day
@@ -710,8 +716,6 @@ const MY_PLAN_KEY = 'gjp_my_plan';
   document.getElementById('dday-text').textContent = `오늘부터 시험까지 D-${diff}일 남았습니다`;
 
   // 날짜 선택 달력 초기화
-  calYear  = TODAY.getFullYear();
-  calMonth = TODAY.getMonth();
   renderCalendar();
 
   // Hours buttons: 2h ~ 8h+ (체크박스형)
@@ -745,12 +749,6 @@ function pick(btn, key) {
   S[key] = btn.dataset.v;
   updateHoursHint();
 }
-
-/* ── 달력 변수 ── */
-let calYear  = 2026;
-let calMonth = 0; // 0-indexed
-const CAL_MIN = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
-const CAL_MAX = new Date(2026, 7, 31); // 8월 31일
 
 function renderCalendar() {
   const grid      = document.getElementById('month-grid');
