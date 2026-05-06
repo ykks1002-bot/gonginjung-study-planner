@@ -642,10 +642,10 @@
 
 <div id="right-actions" style="
   position:fixed;
-  right:max(12px, calc((100vw - 860px) / 2 - 148px));
+  right:12px;
   z-index:1000;
   display:flex; flex-direction:column; gap:8px; align-items:stretch;
-  transition: top .1s;">
+  transition: top .1s, right .1s;">
   <div id="my-plan-btn" onclick="goMyPlan()" class="my-plan-btn" style="display:none;
     background:linear-gradient(135deg,#1e40af,#2563eb);
     border-color:rgba(255,255,255,.6);
@@ -1753,8 +1753,25 @@ function saveMyPlanWithFeedback(btn) {
 function positionMyPlanBtn() {
   const container = document.getElementById('right-actions');
   if (!container) return;
-  const bannerTop = document.querySelector('.exam-banner').getBoundingClientRect().top;
-  container.style.top = Math.max(bannerTop + 8, 20) + 'px';
+
+  const gap    = 12;
+  const btnW   = container.offsetWidth || 145;
+  const viewW  = window.innerWidth;
+  const wrap   = document.querySelector('.wrap');
+  const spaceRight = wrap ? viewW - wrap.getBoundingClientRect().right : 0;
+
+  if (spaceRight >= btnW + gap * 2) {
+    // 컨텐츠 오른쪽에 충분한 공간 → 컨텐츠 바로 오른쪽에 배치
+    container.style.right  = (spaceRight - btnW - gap) + 'px';
+    const bannerTop = document.querySelector('.exam-banner').getBoundingClientRect().top;
+    container.style.top    = Math.max(bannerTop + 8, 20) + 'px';
+    container.style.bottom = 'auto';
+  } else {
+    // 공간 부족 → 우측 하단 고정
+    container.style.right  = gap + 'px';
+    container.style.bottom = gap + 'px';
+    container.style.top    = 'auto';
+  }
 }
 window.addEventListener('scroll', positionMyPlanBtn);
 window.addEventListener('resize', positionMyPlanBtn);
