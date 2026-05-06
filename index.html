@@ -156,23 +156,52 @@
     .hours-btn.active .sub { color: rgba(255,255,255,.8); }
 
     /* ── Month grid ─────────────────────────────────── */
-    .month-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-    @media (min-width: 721px) { .month-grid { grid-template-columns: repeat(4, 1fr); } }
-    .month-btn {
-      padding: 10px 6px;
-      border: 2px solid var(--gray-200);
-      border-radius: 9px;
-      background: #fff;
-      color: var(--gray-700);
-      cursor: pointer;
-      font-size: .88rem;
-      font-weight: 600;
-      text-align: center;
-      transition: border-color .15s, background .15s, color .15s;
+    /* ── Date-picker calendar ───────────────────── */
+    .cal-wrap { user-select: none; }
+    .cal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 4px 0 10px;
     }
-    .month-btn:hover  { border-color: var(--blue); color: var(--blue); }
-    .month-btn.active { border-color: var(--blue); background: var(--blue); color: #fff; }
-    .month-btn .sub   { font-size: .65rem; font-weight: 400; display: block; margin-top: 2px; opacity: .8; }
+    .cal-nav {
+      background: none; border: 1px solid var(--gray-200); cursor: pointer;
+      font-size: 1rem; color: var(--blue); padding: 4px 10px;
+      border-radius: 7px; transition: background .12s;
+    }
+    .cal-nav:hover { background: var(--blue-light); }
+    .cal-nav:disabled { color: var(--gray-400); cursor: default; border-color: transparent; }
+    .cal-nav:disabled:hover { background: none; }
+    .cal-title { font-weight: 700; font-size: .97rem; color: var(--gray-900); }
+    .cal-grid  { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+    .cal-dh {
+      text-align: center; font-size: .68rem; font-weight: 600;
+      color: var(--gray-500); padding: 3px 0;
+    }
+    .cal-dh.sun { color: #ef4444; }
+    .cal-dh.sat { color: var(--blue); }
+    .cal-day {
+      text-align: center; font-size: .85rem; padding: 7px 2px;
+      border-radius: 50%; cursor: pointer; line-height: 1;
+      transition: background .1s;
+    }
+    .cal-day:empty { pointer-events: none; }
+    .cal-day.disabled { color: var(--gray-400); cursor: not-allowed; }
+    .cal-day.sun { color: #ef4444; }
+    .cal-day.sat { color: var(--blue); }
+    .cal-day.today { font-weight: 800; }
+    .cal-day.selected { background: var(--blue) !important; color: #fff !important; font-weight: 700; border-radius: 50%; }
+    .cal-day:not(.disabled):not(.selected):hover { background: var(--blue-light); }
+    .cal-today-btn {
+      display: block; width: 100%; margin-top: 8px;
+      padding: 7px; border: 1px solid var(--gray-200);
+      border-radius: 8px; background: #fff; cursor: pointer;
+      font-size: .85rem; font-weight: 600; color: var(--gray-700);
+      transition: all .12s;
+    }
+    .cal-today-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+    .cal-selected-label {
+      margin-top: 8px; font-size: .8rem; color: var(--blue);
+      text-align: center; font-weight: 600;
+    }
 
     /* ── Hours hint ─────────────────────────────────── */
     .hours-hint  { margin-top: 12px; font-size: .84rem; padding: 8px 12px; border-radius: 8px; }
@@ -671,7 +700,7 @@ const SHORT = {
 };
 
 /* ═══════════════════ STATE ═══════════════════ */
-const S = { target: null, month: null, hours: null };
+const S = { target: null, month: null, startDate: null, hours: null };
 const MY_PLAN_KEY = 'gjp_my_plan';
 
 /* ═══════════════════ INIT ════════════════════ */
@@ -680,26 +709,10 @@ const MY_PLAN_KEY = 'gjp_my_plan';
   const diff = Math.ceil((EXAM_DATE - TODAY) / 864e5);
   document.getElementById('dday-text').textContent = `오늘부터 시험까지 D-${diff}일 남았습니다`;
 
-  // Month buttons: 1월 ~ 8월
-  const monthGrid = document.getElementById('month-grid');
-  const monthData = [
-    { m:1, lbl:'1월', sub:'10개월 전' },
-    { m:2, lbl:'2월', sub:'9개월 전'  },
-    { m:3, lbl:'3월', sub:'8개월 전'  },
-    { m:4, lbl:'4월', sub:'7개월 전'  },
-    { m:5, lbl:'5월', sub:'6개월 전'  },
-    { m:6, lbl:'6월', sub:'5개월 전'  },
-    { m:7, lbl:'7월', sub:'4개월 전'  },
-    { m:8, lbl:'8월', sub:'원서접수'  },
-  ];
-  monthData.forEach(({ m, lbl, sub }) => {
-    const btn = document.createElement('button');
-    btn.className = 'month-btn';
-    btn.dataset.v = m;
-    btn.innerHTML = lbl + `<span class="sub">${sub}</span>`;
-    btn.onclick = () => pickMonth(btn, m);
-    monthGrid.appendChild(btn);
-  });
+  // 날짜 선택 달력 초기화
+  calYear  = TODAY.getFullYear();
+  calMonth = TODAY.getMonth();
+  renderCalendar();
 
   // Hours buttons: 2h ~ 8h+ (체크박스형)
   const hoursGroup = document.getElementById('hours-group');
@@ -733,10 +746,95 @@ function pick(btn, key) {
   updateHoursHint();
 }
 
-function pickMonth(btn, m) {
-  document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  S.month = m;
+/* ── 달력 변수 ── */
+let calYear  = 2026;
+let calMonth = 0; // 0-indexed
+const CAL_MIN = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
+const CAL_MAX = new Date(2026, 7, 31); // 8월 31일
+
+function renderCalendar() {
+  const grid      = document.getElementById('month-grid');
+  const firstDow  = new Date(calYear, calMonth, 1).getDay();
+  const daysInM   = new Date(calYear, calMonth + 1, 0).getDate();
+  const prevDisabled = new Date(calYear, calMonth, 1) <= new Date(CAL_MIN.getFullYear(), CAL_MIN.getMonth(), 1);
+  const nextDisabled = new Date(calYear, calMonth, 1) >= new Date(CAL_MAX.getFullYear(), CAL_MAX.getMonth(), 1);
+  const monthNames   = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  const dayNames     = ['일','월','화','수','목','금','토'];
+
+  let h = `<div class="cal-wrap">
+    <div class="cal-header">
+      <button class="cal-nav" onclick="calNav(-1)" ${prevDisabled?'disabled':''}>←</button>
+      <span class="cal-title">${monthNames[calMonth]} ${calYear}</span>
+      <button class="cal-nav" onclick="calNav(1)"  ${nextDisabled?'disabled':''}>→</button>
+    </div>
+    <div class="cal-grid">`;
+
+  dayNames.forEach((d, i) => {
+    const cls = i===0 ? 'sun' : i===6 ? 'sat' : '';
+    h += `<div class="cal-dh ${cls}">${d}</div>`;
+  });
+
+  for (let i = 0; i < firstDow; i++) h += `<div class="cal-day"></div>`;
+
+  for (let d = 1; d <= daysInM; d++) {
+    const date    = new Date(calYear, calMonth, d);
+    const dow     = date.getDay();
+    const isPast  = date < CAL_MIN;
+    const isOver  = date > CAL_MAX;
+    const isToday = date.getTime() === CAL_MIN.getTime();
+    const isSel   = S.startDate &&
+      date.getFullYear() === S.startDate.getFullYear() &&
+      date.getMonth()    === S.startDate.getMonth()    &&
+      date.getDate()     === S.startDate.getDate();
+
+    const disabled = isPast || isOver;
+    let cls = 'cal-day';
+    if (disabled)  cls += ' disabled';
+    else if (isSel) cls += ' selected';
+    if (isToday)   cls += ' today';
+    if (dow === 0) cls += ' sun';
+    if (dow === 6) cls += ' sat';
+
+    const onclick = disabled ? '' : `onclick="pickDate(${calYear},${calMonth},${d})"`;
+    h += `<div class="${cls}" ${onclick}>${d}</div>`;
+  }
+
+  h += `</div>`; // cal-grid
+
+  const todayLabel = `${CAL_MIN.getMonth()+1}월 ${CAL_MIN.getDate()}일`;
+  h += `<button class="cal-today-btn" onclick="goToday()">오늘 (${todayLabel})</button>`;
+
+  if (S.startDate) {
+    const mn  = S.startDate.getMonth() + 1;
+    const dn  = S.startDate.getDate();
+    const day = dayNames[S.startDate.getDay()];
+    h += `<div class="cal-selected-label">📅 시작일: ${mn}월 ${dn}일 (${day})</div>`;
+  }
+
+  h += `</div>`; // cal-wrap
+  grid.innerHTML = h;
+}
+
+function calNav(dir) {
+  calMonth += dir;
+  if (calMonth < 0)  { calMonth = 11; calYear--; }
+  if (calMonth > 11) { calMonth = 0;  calYear++; }
+  renderCalendar();
+}
+
+function goToday() {
+  calYear  = CAL_MIN.getFullYear();
+  calMonth = CAL_MIN.getMonth();
+  pickDate(calYear, calMonth, CAL_MIN.getDate());
+}
+
+function pickDate(y, m, d) {
+  const date  = new Date(y, m, d);
+  S.startDate = date;
+  S.month     = date.getMonth() + 1;
+  calYear     = y;
+  calMonth    = m;
+  renderCalendar();
 }
 
 function pickHours(btn, h) {
@@ -793,19 +891,27 @@ function getLecturesForTarget(c, target) {
 }
 
 function buildPlan() {
-  const now        = new Date();
-  const curMonth   = now.getMonth() + 1;
-  const startDate  = S.month <= curMonth
-    ? new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    : new Date(2026, S.month - 1, 1);
-  const totalDays  = Math.ceil((EXAM_DATE - startDate) / 864e5);
-  const lpd        = lecturesPerDay(S.hours);
+  const startDate   = S.startDate;
+  const startMonth  = startDate.getMonth() + 1;
+  const totalDays   = Math.ceil((EXAM_DATE - startDate) / 864e5);
+  const lpd         = lecturesPerDay(S.hours);
 
-  // 월별 데이터를 먼저 계산 → capacity를 월별 합산으로 구해 표시값과 일치
+  // 월별 데이터 계산 (시작 월은 시작일 이후만 집계)
   const months = [];
-  for (let m = S.month; m <= 10; m++) {
-    const sd  = allDaysInMonth(m);
-    const ld  = lectureDaysInMonth(m);
+  for (let m = startMonth; m <= 10; m++) {
+    let sd, ld;
+    if (m === startMonth) {
+      const daysInM  = new Date(2026, m, 0).getDate();
+      const startDay = startDate.getDate();
+      sd = daysInM - startDay + 1;
+      ld = 0;
+      for (let day = startDay; day <= daysInM; day++) {
+        if (new Date(2026, m - 1, day).getDay() !== 0) ld++;
+      }
+    } else {
+      sd = allDaysInMonth(m);
+      ld = lectureDaysInMonth(m);
+    }
     const sun = sd - ld;
     const lec = ld * lpd;
     months.push({ m, sd, ld, sun, lec });
@@ -881,7 +987,7 @@ function buildPlan() {
 
 /* ═══════════════════ RENDER ══════════════════ */
 function generate() {
-  if (!S.target || !S.month || !S.hours) {
+  if (!S.target || !S.startDate || !S.hours) {
     alert('시험 목표, 시작 월, 학습 시간을 모두 선택해주세요.');
     return;
   }
@@ -1031,7 +1137,8 @@ function renderStats(p) {
 /* ── My plan (last settings) ────────────────── */
 function saveMyPlan() {
   localStorage.setItem(MY_PLAN_KEY, JSON.stringify({
-    target: S.target, month: S.month, hours: S.hours
+    target: S.target, month: S.month, hours: S.hours,
+    startDate: S.startDate ? S.startDate.toISOString() : null
   }));
   updateMyPlanBtn();
 }
@@ -1051,7 +1158,7 @@ function updateMyPlanBtn() {
   btn.style.display = '';
   btn.innerHTML = `
     <div class="mpb-tag">📋 나의 학습계획</div>
-    <div class="mpb-val">${tLbl} · ${saved.month}월 · ${hLbl}</div>
+    <div class="mpb-val">${tLbl} · ${saved.month}월${saved.startDate ? ' ' + new Date(saved.startDate).getDate() + '일' : ''} · ${hLbl}</div>
     <div class="mpb-action">▶ 바로 보기</div>`;
   positionMyPlanBtn();
 }
@@ -1062,9 +1169,21 @@ function goMyPlan() {
   document.querySelectorAll('.opt-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.v === saved.target));
   S.target = saved.target;
-  document.querySelectorAll('.month-btn').forEach(b =>
-    b.classList.toggle('active', +b.dataset.v === saved.month));
-  S.month = saved.month;
+  // 날짜 복원
+  if (saved.startDate) {
+    const d = new Date(saved.startDate);
+    S.startDate = d;
+    S.month     = d.getMonth() + 1;
+    calYear     = d.getFullYear();
+    calMonth    = d.getMonth();
+  } else if (saved.month) {
+    const d = new Date(2026, saved.month - 1, 1);
+    S.startDate = d;
+    S.month     = saved.month;
+    calYear     = 2026;
+    calMonth    = saved.month - 1;
+  }
+  renderCalendar();
   document.querySelectorAll('.hours-btn').forEach(b =>
     b.classList.toggle('active', +b.dataset.v === saved.hours));
   S.hours = saved.hours;
@@ -1311,13 +1430,10 @@ function buildDailyPlanData(p) {
   const moMap = {};
   months.forEach(mo => { moMap[mo.m] = mo; });
 
-  const now       = new Date();
-  const planStart = S.month <= now.getMonth() + 1
-    ? new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    : new Date(2026, S.month - 1, 1);
+  const planStart = S.startDate;
 
   const days = [];
-  const cur  = new Date(2026, S.month - 1, 1);
+  const cur  = new Date(2026, planStart.getMonth(), 1);
   const exam = new Date(2026, 9, 31);
 
   while (cur <= exam) {
@@ -1496,7 +1612,7 @@ async function downloadPDF(btn) {
       <div style="background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;
                   padding:14px 24px;text-align:center;">
         <div style="font-size:17px;font-weight:800;margin-bottom:3px;">공인중개사 학습계획</div>
-        <div style="font-size:12px;opacity:.85;">${tLbl} &nbsp;·&nbsp; ${S.month}월 시작 &nbsp;·&nbsp; 하루 ${hLbl}</div>
+        <div style="font-size:12px;opacity:.85;">${tLbl} &nbsp;·&nbsp; ${S.month}월 ${S.startDate.getDate()}일 시작 &nbsp;·&nbsp; 하루 ${hLbl}</div>
       </div>`;
 
     // 로드맵 섹션 (gantt 복제 + 커리큘럼명 강제 표기)
@@ -1614,7 +1730,7 @@ async function downloadPDF(btn) {
         imgX, imgY, imgW, Math.min(imgH, LS_H - LS_M * 2));
     }
 
-    pdf.save(`공인중개사_학습계획_${tLbl}_${S.month}월시작.pdf`);
+    pdf.save(`공인중개사_학습계획_${tLbl}_${S.month}월${S.startDate.getDate()}일시작.pdf`);
   } finally {
     btn.innerHTML = orig;
     btn.disabled = false;
