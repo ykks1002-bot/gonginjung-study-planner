@@ -1416,7 +1416,6 @@ function buildDailyPlanData(p) {
   const subjs = SUBJECTS[S.target];
   const n     = subjs.length;
 
-  // 월별 스케줄 맵
   const moMap = {};
   months.forEach(mo => { moMap[mo.m] = mo; });
 
@@ -1426,21 +1425,15 @@ function buildDailyPlanData(p) {
   const cur  = new Date(2026, planStart.getMonth(), 1);
   const exam = new Date(2026, 9, 31);
 
+  // 1단계: 커리큘럼 레이블 부여 (과목은 미할당)
   while (cur <= exam) {
     const dow     = cur.getDay();
-    const dayData = { date: new Date(cur), dow };
+    const dayData = { date: new Date(cur), dow, subj: null };
 
     if (cur < planStart) {
-      dayData.subj = null; dayData.lecLabel = ''; dayData.method = '';
+      dayData.lecLabel = ''; dayData.method = '';
     } else {
-      // 과목 로테이션 — 경과일 기반으로 매일 순환 (같은 과목 연속 없음)
-      const daysSince = Math.floor((cur - planStart) / 864e5);
-      const subjIdx   = daysSince % n;
-
-      // 이번 달 몇 번째 강의일인지 계산 (일요일 포함)
       const lecDayInMonth = cur.getDate();
-
-      // mo.schedule로 커리큘럼 결정
       const mo = moMap[cur.getMonth() + 1];
       let lecLabel = '전 과정 복습';
       if (mo && mo.schedule && mo.ld > 0) {
@@ -1458,8 +1451,6 @@ function buildDailyPlanData(p) {
           lecLabel = last.rev ? '부족한 과목 복습' : last.name;
         }
       }
-
-      dayData.subj     = subjs[subjIdx];
       dayData.lecLabel = lecLabel;
       dayData.method   = '강의 수강';
     }
@@ -1467,6 +1458,31 @@ function buildDailyPlanData(p) {
     days.push(dayData);
     cur.setDate(cur.getDate() + 1);
   }
+
+  // 2단계: 커리큘럼별 과목 동일 횟수 배분
+  // 복습·미할당 레이블은 제외하고, 강의 커리큘럼 일자만 대상
+  const REVIEW_LABELS = new Set(['부족한 과목 복습', '전 과정 복습', '']);
+  const currMap = {};
+  days.forEach((d, i) => {
+    if (d.method === '강의 수강' && !REVIEW_LABELS.has(d.lecLabel)) {
+      if (!currMap[d.lecLabel]) currMap[d.lecLabel] = [];
+      currMap[d.lecLabel].push(i);
+    }
+  });
+
+  // 각 커리큘럼에서 완전한 사이클(n개 단위)만 과목 배분 → 모든 과목 동일 횟수
+  Object.entries(currMap).forEach(([, indices]) => {
+    const covered = Math.floor(indices.length / n) * n;
+    indices.forEach((dayIdx, pos) => {
+      if (pos < covered) {
+        days[dayIdx].subj = subjs[pos % n];
+      } else {
+        // 나머지 일수(사이클 미완성)는 복습으로 전환
+        days[dayIdx].lecLabel = '부족한 과목 복습';
+      }
+    });
+  });
+
   return days;
 }
 
