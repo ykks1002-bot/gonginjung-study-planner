@@ -1293,10 +1293,10 @@ function renderCurriculum(p) {
 
 /* ── Weekly schedule ────────────────────────── */
 function renderWeekly(p) {
-  const subjs = SUBJECTS[S.target];
-  const n     = subjs.length;
-  const weekdays = ['월', '화', '수', '목', '금', '토'];  // 월~토 6일
-  const allDays  = [...weekdays, '일'];                    // + 일요일
+  const subjs     = SUBJECTS[S.target];
+  const n         = subjs.length;
+  const startDate = S.startDate;
+  const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
   // 시작 커리큘럼 안내
   const firstCurr = p.result.find(c => c.status !== 'skipped');
@@ -1304,50 +1304,65 @@ function renderWeekly(p) {
     ? `<div style="margin-bottom:14px;padding:10px 14px;background:var(--blue-light);
          border:1px solid #bfdbfe;border-radius:8px;font-size:.84rem;color:#1e40af;">
          📌 <strong>학습 시작 커리큘럼:</strong> ${firstCurr.name} (${firstCurr.needed}강)
-         — 아래 요일 패턴으로 과목을 순환하며 수강합니다.
+         — 매일 과목을 순환하며 수강합니다 (같은 과목 연속 없음).
        </div>`
     : '';
 
-  // 주간 패턴 구성 (일요일 포함 7일 로테이션)
-  const buildWeek = (offset) =>
-    allDays.map((d, i) => {
-      const idx = (i + offset) % n;
-      return { d, subj: subjs[idx], cls: `s${idx}` };
-    });
+  // 시작일이 포함된 주의 일요일 기준으로 2주 실제 스케줄 생성
+  const firstSun = new Date(startDate);
+  firstSun.setDate(firstSun.getDate() - firstSun.getDay()); // 해당 주 일요일
 
-  const rows = [{ label: n === 4 ? 'A주' : '매주', schedule: buildWeek(0) }];
-  if (n === 4) rows.push({ label: 'B주', schedule: buildWeek(2) });
+  const rows = [];
+  for (let w = 0; w < 2; w++) {
+    const slots = [];
+    for (let d = 0; d < 7; d++) {
+      const date = new Date(firstSun);
+      date.setDate(firstSun.getDate() + w * 7 + d);
+      const isPre = date < startDate;
+      if (isPre) {
+        slots.push({ d: DAY_NAMES[d], empty: true });
+      } else {
+        const daysSince = Math.floor((date - startDate) / 864e5);
+        const subjIdx   = daysSince % n;
+        slots.push({ d: DAY_NAMES[d], subj: subjs[subjIdx], cls: `s${subjIdx}` });
+      }
+    }
+    rows.push({ label: `${w + 1}주차`, slots });
+  }
 
   // 테이블 HTML
   let html = currNote;
   html += `<div class="week-scroll"><table class="week"><thead><tr><th>주차</th>`;
-  allDays.forEach(d => {
-    html += `<th${d === '일' ? ' class="sun-th"' : ''}>${d}</th>`;
+  DAY_NAMES.forEach((d, i) => {
+    html += `<th${i === 0 ? ' class="sun-th"' : ''}>${d}</th>`;
   });
   html += `</tr></thead><tbody>`;
 
   rows.forEach(row => {
-    html += `<tr>
-      <td style="font-weight:700;font-size:.8rem;color:var(--blue);white-space:nowrap;">${row.label}</td>`;
-    row.schedule.forEach(slot => {
-      const short = SHORT[slot.subj] || slot.subj;
-      const isSun = slot.d === '일';
-      html += `<td${isSun ? ' class="sun-td"' : ''}>
-        <span class="stag ${slot.cls}">${short}</span>
-        <br><span style="font-size:.7rem;color:var(--gray-400);">${S.hours}h</span>
-      </td>`;
+    html += `<tr><td style="font-weight:700;font-size:.8rem;color:var(--blue);white-space:nowrap;">${row.label}</td>`;
+    row.slots.forEach(slot => {
+      if (slot.empty) {
+        html += `<td></td>`;
+      } else {
+        const short  = SHORT[slot.subj] || slot.subj;
+        const isSun  = slot.d === '일';
+        html += `<td${isSun ? ' class="sun-td"' : ''}>
+          <span class="stag ${slot.cls}">${short}</span>
+          <br><span style="font-size:.7rem;color:var(--gray-400);">${S.hours}h</span>
+        </td>`;
+      }
     });
     html += `</tr>`;
   });
 
   html += `</tbody></table></div>`;
 
-  const noteText = n === 4
-    ? 'A·B주를 격주로 반복합니다. 일요일 포함 매일 강의를 수강합니다.'
-    : n === 2
-    ? '두 과목을 번갈아 매일(일요일 포함) 수강합니다.'
-    : '6과목을 순환하며 매일(일요일 포함) 수강합니다.';
-  html += `<div class="week-note">※ ${noteText} 동일한 커리큘럼을 해당 과목 완강 시까지 반복합니다.</div>`;
+  const noteText = n === 2
+    ? '2과목이 하루씩 교대 순환합니다.'
+    : n === 4
+    ? '4과목이 하루씩 순환합니다.'
+    : '6과목이 하루씩 순환합니다.';
+  html += `<div class="week-note">※ 매일 1과목씩 순환 수강 (연속 같은 과목 없음). ${noteText} 동일한 커리큘럼을 해당 과목 완강 시까지 반복합니다.</div>`;
 
   document.getElementById('week-table').innerHTML = html;
 }
@@ -1418,12 +1433,9 @@ function buildDailyPlanData(p) {
     if (cur < planStart) {
       dayData.subj = null; dayData.lecLabel = ''; dayData.method = '';
     } else {
-      // 과목 로테이션 (월~일 7일 전체, 일=6번째 인덱스)
-      const daysSince  = Math.floor((cur - planStart) / 864e5);
-      const isAWeek    = Math.floor(daysSince / 7) % 2 === 0;
-      const dayIdx     = dow === 0 ? 6 : dow - 1; // 일요일 → 6
-      const offset     = n === 4 ? (isAWeek ? 0 : 2) : 0;
-      const subjIdx    = (dayIdx + offset) % n;
+      // 과목 로테이션 — 경과일 기반으로 매일 순환 (같은 과목 연속 없음)
+      const daysSince = Math.floor((cur - planStart) / 864e5);
+      const subjIdx   = daysSince % n;
 
       // 이번 달 몇 번째 강의일인지 계산 (일요일 포함)
       const lecDayInMonth = cur.getDate();
