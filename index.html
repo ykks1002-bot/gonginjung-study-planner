@@ -877,9 +877,9 @@ function allDaysInMonth(month) {
   return new Date(2026, month, 0).getDate();
 }
 
-// 한 달의 강의 수강 가능일 (월~토, 일요일 제외)
+// 한 달의 강의 수강 가능일 (월~일, 7일 전체)
 function lectureDaysInMonth(month) {
-  return Math.round(allDaysInMonth(month) * 6 / 7);
+  return allDaysInMonth(month);
 }
 
 function getLecturesForTarget(c, target) {
@@ -902,17 +902,13 @@ function buildPlan() {
       const daysInM  = new Date(2026, m, 0).getDate();
       const startDay = startDate.getDate();
       sd = daysInM - startDay + 1;
-      ld = 0;
-      for (let day = startDay; day <= daysInM; day++) {
-        if (new Date(2026, m - 1, day).getDay() !== 0) ld++;
-      }
+      ld = sd; // 일요일 포함 전일 수강
     } else {
       sd = allDaysInMonth(m);
       ld = lectureDaysInMonth(m);
     }
-    const sun = sd - ld;
     const lec = ld * lpd;
-    months.push({ m, sd, ld, sun, lec });
+    months.push({ m, sd, ld, lec });
   }
   const lecDays = months.reduce((s, mo) => s + mo.ld, 0);
   const capacity = months.reduce((s, mo) => s + mo.lec, 0); // 월별 합산 = 표시값과 동일
@@ -1312,10 +1308,9 @@ function renderWeekly(p) {
        </div>`
     : '';
 
-  // 주간 패턴 구성
+  // 주간 패턴 구성 (일요일 포함 7일 로테이션)
   const buildWeek = (offset) =>
     allDays.map((d, i) => {
-      if (i === 6) return { d, isReview: true };
       const idx = (i + offset) % n;
       return { d, subj: subjs[idx], cls: `s${idx}` };
     });
@@ -1327,9 +1322,7 @@ function renderWeekly(p) {
   let html = currNote;
   html += `<div class="week-scroll"><table class="week"><thead><tr><th>주차</th>`;
   allDays.forEach(d => {
-    html += d === '일'
-      ? `<th class="sun-th">일 (복습)</th>`
-      : `<th>${d}</th>`;
+    html += `<th${d === '일' ? ' class="sun-th"' : ''}>${d}</th>`;
   });
   html += `</tr></thead><tbody>`;
 
@@ -1337,36 +1330,23 @@ function renderWeekly(p) {
     html += `<tr>
       <td style="font-weight:700;font-size:.8rem;color:var(--blue);white-space:nowrap;">${row.label}</td>`;
     row.schedule.forEach(slot => {
-      if (slot.isReview) {
-        html += `<td class="sun-td">
-          <span class="stag sun-2">부족과목</span>
-        </td>`;
-      } else {
-        const short = SHORT[slot.subj] || slot.subj;
-        html += `<td>
-          <span class="stag ${slot.cls}">${short}</span>
-          <br><span style="font-size:.7rem;color:var(--gray-400);">${S.hours}h</span>
-        </td>`;
-      }
+      const short = SHORT[slot.subj] || slot.subj;
+      const isSun = slot.d === '일';
+      html += `<td${isSun ? ' class="sun-td"' : ''}>
+        <span class="stag ${slot.cls}">${short}</span>
+        <br><span style="font-size:.7rem;color:var(--gray-400);">${S.hours}h</span>
+      </td>`;
     });
     html += `</tr>`;
   });
 
   html += `</tbody></table></div>`;
 
-  // 일요일 복습 설명
-  html += `<div class="sun-phase-box">
-    <strong>📚 일요일 복습 방식</strong>
-    <div class="phase-tags">
-      <span class="phase-tag phase-tag-2">매주 일요일: 부족한 과목 집중 복습</span>
-    </div>
-  </div>`;
-
   const noteText = n === 4
-    ? 'A·B주를 격주로 반복합니다. 4과목이 2주 동안 각 3일씩 균등 배분됩니다.'
+    ? 'A·B주를 격주로 반복합니다. 일요일 포함 매일 강의를 수강합니다.'
     : n === 2
-    ? '두 과목이 3일씩 균등 배분됩니다.'
-    : '6과목이 1일씩 배분됩니다.';
+    ? '두 과목을 번갈아 매일(일요일 포함) 수강합니다.'
+    : '6과목을 순환하며 매일(일요일 포함) 수강합니다.';
   html += `<div class="week-note">※ ${noteText} 동일한 커리큘럼을 해당 과목 완강 시까지 반복합니다.</div>`;
 
   document.getElementById('week-table').innerHTML = html;
@@ -1396,10 +1376,7 @@ function renderMonthly(p) {
         <span style="font-size:.75rem;opacity:.8;flex-shrink:0;white-space:nowrap;margin-left:4px;">${isExam ? '시험일 10.31' : `학습 ${sd}일`}</span>
       </div>
       <div class="mo-body">
-        <div class="mo-meta">하루 ${lpd}강 × ${ld}일(월~토) = 약 ${lec}강</div>
-        <div class="mo-sun phase2">
-          📚 일요일 ${sun}회: 부족한 과목 복습
-        </div>`;
+        <div class="mo-meta">하루 ${lpd}강 × ${ld}일(월~일) = 약 ${lec}강</div>`;
 
     if (currItems.length > 0) {
       currItems.forEach(it => {
@@ -1438,29 +1415,24 @@ function buildDailyPlanData(p) {
     const dow     = cur.getDay();
     const dayData = { date: new Date(cur), dow };
 
-    if (dow === 0) {
-      dayData.subj = null; dayData.lecLabel = ''; dayData.method = '교재복습';
-    } else if (cur < planStart) {
+    if (cur < planStart) {
       dayData.subj = null; dayData.lecLabel = ''; dayData.method = '';
     } else {
-      // 과목 로테이션
+      // 과목 로테이션 (월~일 7일 전체, 일=6번째 인덱스)
       const daysSince  = Math.floor((cur - planStart) / 864e5);
       const isAWeek    = Math.floor(daysSince / 7) % 2 === 0;
-      const dayIdx     = dow - 1;
+      const dayIdx     = dow === 0 ? 6 : dow - 1; // 일요일 → 6
       const offset     = n === 4 ? (isAWeek ? 0 : 2) : 0;
       const subjIdx    = (dayIdx + offset) % n;
 
-      // 이번 달 몇 번째 강의일인지 계산 (월 1일 기준)
-      let lecDayInMonth = 0;
-      for (let d = 1; d <= cur.getDate(); d++) {
-        if (new Date(cur.getFullYear(), cur.getMonth(), d).getDay() !== 0) lecDayInMonth++;
-      }
+      // 이번 달 몇 번째 강의일인지 계산 (일요일 포함)
+      const lecDayInMonth = cur.getDate();
 
       // mo.schedule로 커리큘럼 결정
       const mo = moMap[cur.getMonth() + 1];
       let lecLabel = '전 과정 복습';
       if (mo && mo.schedule && mo.ld > 0) {
-        const pos = lecDayInMonth / mo.ld; // 0~1 비율
+        const pos = lecDayInMonth / mo.ld;
         let cum = 0;
         for (const item of mo.schedule) {
           cum += item.pct / 100;
@@ -1469,7 +1441,6 @@ function buildDailyPlanData(p) {
             break;
           }
         }
-        // 마지막 항목 보정
         if (lecLabel === '전 과정 복습' && mo.schedule.length) {
           const last = mo.schedule[mo.schedule.length - 1];
           lecLabel = last.rev ? '부족한 과목 복습' : last.name;
@@ -1478,7 +1449,7 @@ function buildDailyPlanData(p) {
 
       dayData.subj     = subjs[subjIdx];
       dayData.lecLabel = lecLabel;
-      dayData.method   = dow === 6 ? '강의 수강 > 교재복습' : '강의 수강';
+      dayData.method   = '강의 수강';
     }
 
     days.push(dayData);
@@ -1571,7 +1542,7 @@ function renderMonthTableHTML(monthNum, allDays) {
         h += `<td rowspan="2" style="${TD}background:#fef3c7;font-weight:700;color:#92400e;vertical-align:middle;font-size:8px;">🎯 제37회 시험일</td>`;
         return;
       }
-      const txt = isPast(d) ? '' : (d.dow===0 ? '복습' : (d.subj ? (SUBJ_SHORT[d.subj]||d.subj) : ''));
+      const txt = isPast(d) ? '' : (d.subj ? (SUBJ_SHORT[d.subj]||d.subj) : '');
       h += `<td style="${TD}background:${!txt?'#f1f5f9':'#fff'};">${txt}</td>`;
     });
     h += `</tr>`;
