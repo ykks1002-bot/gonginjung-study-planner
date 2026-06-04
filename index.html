@@ -869,8 +869,8 @@ function updateHoursHint() {
 }
 
 /* ═══════════════════ CALC ════════════════════ */
-// 1강 ≈ 60분 → 하루 N시간 = 약 N강 (학습 시간을 넘지 않음)
-function lecturesPerDay(h) { return Math.max(1, h - 1); }
+// 1강 ≈ 60분 → 하루 N시간 = N강 (시간 = 강의수 동일)
+function lecturesPerDay(h) { return h; }
 
 // 한 달의 전체 날수 (일요일 포함, 모든 날 학습)
 function allDaysInMonth(month) {
