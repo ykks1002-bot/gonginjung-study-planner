@@ -711,8 +711,9 @@ const CAL_MAX = new Date(2026, 7, 31); // 8월 31일
 
 /* ═══════════════════ INIT ════════════════════ */
 (function init() {
-  // D-day
-  const diff = Math.ceil((EXAM_DATE - TODAY) / 864e5);
+  // D-day (자정 기준으로 계산)
+  const todayMid = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
+  const diff = Math.ceil((EXAM_DATE - todayMid) / 864e5);
   document.getElementById('dday-text').textContent = `오늘부터 시험까지 D-${diff}일 남았습니다`;
 
   // 날짜 선택 달력 초기화
@@ -891,7 +892,8 @@ function getLecturesForTarget(c, target) {
 function buildPlan() {
   const startDate   = S.startDate;
   const startMonth  = startDate.getMonth() + 1;
-  const totalDays   = Math.ceil((EXAM_DATE - startDate) / 864e5);
+  const startMid    = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+  const totalDays   = Math.ceil((EXAM_DATE - startMid) / 864e5);
   const lpd         = lecturesPerDay(S.hours);
 
   // 월별 데이터 계산 (시작 월은 시작일 이후만 집계)
