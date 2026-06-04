@@ -1117,19 +1117,19 @@ function renderGantt(p) {
 
 /* ── Stats ──────────────────────────────────── */
 function renderStats(p) {
-  const { totalDays, capacity, totalNeeded, coveragePct, fullCount, lpd } = p;
+  const { totalDays, capacity, totalNeeded, coveragePct, fullCount, lpd, result } = p;
   const hDisp = S.hours >= 9 ? '8h+' : S.hours + 'h';
+  const recNeeded = result.filter(c => c.status !== 'skipped').reduce((s, c) => s + c.needed, 0);
   document.getElementById('stat-grid').innerHTML = [
-    { val: totalDays + '일',      lbl: '총 학습 기간'       },
-    { val: hDisp,                 lbl: '하루 학습 시간'      },
-    { val: '약 ' + lpd + '강',    lbl: '하루 수강<br>강의수'   },
+    { val: totalDays + '일',                       lbl: '총 학습 기간'         },
+    { val: hDisp,                                  lbl: '하루 학습 시간'        },
+    { val: '약 ' + lpd + '강',                     lbl: '하루 수강<br>강의수'   },
     { val: Math.min(capacity, totalNeeded) + '강', lbl: '수강 가능<br>총 강의'  },
-    { val: totalNeeded + '강',       lbl: '전체 커리큘럼 강의'   },
-    { val: fullCount + '/7',         lbl: '완주 가능<br>과정수'  },
+    { val: recNeeded + '강',                        lbl: '추천 커리큘럼<br>총 강의' },
+    { val: fullCount + '/7',                        lbl: '완주 가능<br>과정수'  },
   ].map(s =>
     `<div class="stat-item"><div class="val">${s.val}</div><div class="lbl">${s.lbl}</div></div>`
   ).join('');
-
 }
 
 /* ── My plan (last settings) ────────────────── */
