@@ -911,7 +911,7 @@ function buildPlan() {
     months.push({ m, sd, ld, lec });
   }
   const lecDays = months.reduce((s, mo) => s + mo.ld, 0);
-  const capacity = months.reduce((s, mo) => s + mo.lec, 0); // 월별 합산 = 표시값과 동일
+  const capacity = totalDays * lpd; // 시험일 제외 학습 가능 일수 × 하루 강의수
 
   const totalNeeded = CURRS.reduce((s, c) => s + getLecturesForTarget(c, S.target), 0);
 
@@ -1111,11 +1111,11 @@ function renderGantt(p) {
 
 /* ── Stats ──────────────────────────────────── */
 function renderStats(p) {
-  const { lecDays, capacity, totalNeeded, coveragePct, fullCount, lpd, result } = p;
+  const { totalDays, capacity, totalNeeded, coveragePct, fullCount, lpd, result } = p;
   const hDisp = S.hours >= 9 ? '8h+' : S.hours + 'h';
   const recNeeded = result.filter(c => c.status !== 'skipped').reduce((s, c) => s + c.needed, 0);
   document.getElementById('stat-grid').innerHTML = [
-    { val: lecDays + '일',                         lbl: '총 학습 기간'         },
+    { val: totalDays + '일',                       lbl: '총 학습 기간'         },
     { val: hDisp,                                  lbl: '하루 학습 시간'        },
     { val: '약 ' + lpd + '강',                     lbl: '하루 수강<br>강의수'   },
     { val: capacity + '강',                        lbl: '수강 가능<br>총 강의'  },
