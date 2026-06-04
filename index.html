@@ -925,8 +925,6 @@ function buildPlan() {
   sorted.forEach(c => {
     if (rem >= c.needed) {
       c.status = 'full'; c.effective = c.needed; rem -= c.needed;
-    } else if (rem * 2 >= c.needed) {
-      c.status = 'partial'; c.effective = rem; c.pct = Math.round(rem / c.needed * 100); rem = 0;
     } else {
       c.status = 'skipped'; c.effective = 0;
     }
@@ -935,7 +933,7 @@ function buildPlan() {
   const result = CURRS.map(orig => sorted.find(c => c.seq === orig.seq));
 
   const coveragePct = Math.min(100, Math.round(capacity / totalNeeded * 100));
-  const fullCount   = result.filter(c => c.status === 'full' || c.status === 'partial').length;
+  const fullCount   = result.filter(c => c.status === 'full').length;
 
   // 용량이 남을 경우 커리큘럼을 10월까지 고르게 배분
   // (매달 contentLec = 실제 커리큘럼 진도 단위, lec = 실제 수강 강의수)
