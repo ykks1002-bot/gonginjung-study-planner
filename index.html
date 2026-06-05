@@ -1845,7 +1845,14 @@ function showStats() {
   }
   fetch(`https://raw.githubusercontent.com/${STATS_OWNER}/${STATS_REPO}/main/stats.json?t=` + Date.now())
     .then(r => r.json())
-    .then(renderStatsModal)
+    .then(data => {
+      // stats.json에 today 필드가 없으므로 daily에서 직접 계산
+      const pad = n => String(n).padStart(2,'0');
+      const kst = new Date(Date.now() + 9*3600000);
+      const todayKey = `${kst.getUTCFullYear()}-${pad(kst.getUTCMonth()+1)}-${pad(kst.getUTCDate())}`;
+      data.today = (data.daily || {})[todayKey] || 0;
+      renderStatsModal(data);
+    })
     .catch(() => {
       document.getElementById('stats-content').innerHTML =
         '<div class="stats-error">데이터를 불러오지 못했습니다.</div>';
