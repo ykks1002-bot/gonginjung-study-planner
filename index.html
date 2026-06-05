@@ -1832,14 +1832,17 @@ async function trackEvent() {
   const today = `${kst.getUTCFullYear()}-${pad(kst.getUTCMonth()+1)}-${pad(kst.getUTCDate())}`;
   try {
     const hdrs = { Authorization:`Bearer ${STATS_TOKEN}`, Accept:'application/vnd.github+json', 'Content-Type':'application/json' };
-    const meta  = await fetch(`${_FB}/stats.json`, { headers: hdrs }).then(r => r.json());
+    const metaRes = await fetch(`${_FB}/stats.json`, { headers: hdrs });
+    if (!metaRes.ok) { console.error('stats 읽기 실패:', metaRes.status); return; }
+    const meta  = await metaRes.json();
     const stats = JSON.parse(_b64dec(meta.content));
     stats.total = (stats.total||0) + 1;
     if (S.target in stats.byTarget) stats.byTarget[S.target]++;
     stats.daily[today] = (stats.daily[today]||0) + 1;
-    await fetch(`${_FB}/stats.json`, { method:'PUT', headers: hdrs,
+    const putRes = await fetch(`${_FB}/stats.json`, { method:'PUT', headers: hdrs,
       body: JSON.stringify({ message:'stats', content: _b64enc(JSON.stringify(stats,null,2)), sha: meta.sha }) });
-  } catch(e) {}
+    if (!putRes.ok) console.error('stats 쓰기 실패:', putRes.status, await putRes.text());
+  } catch(e) { console.error('trackEvent 오류:', e); }
 }
 
 function showStats() {
@@ -1850,17 +1853,20 @@ function showStats() {
       '<div class="stats-error">토큰이 설정되지 않았습니다.</div>';
     return;
   }
-  fetch(`https://raw.githubusercontent.com/${STATS_OWNER}/${STATS_REPO}/main/stats.json?t=` + Date.now())
+  // raw CDN 캐시 우회: GitHub API로 직접 읽기
+  const hdrs = { Authorization:`Bearer ${STATS_TOKEN}`, Accept:'application/vnd.github+json' };
+  fetch(`${_FB}/stats.json`, { headers: hdrs })
     .then(r => r.json())
-    .then(data => {
-      // stats.json에 today 필드가 없으므로 daily에서 직접 계산
+    .then(meta => {
+      const data = JSON.parse(_b64dec(meta.content));
       const pad = n => String(n).padStart(2,'0');
       const kst = new Date(Date.now() + 9*3600000);
       const todayKey = `${kst.getUTCFullYear()}-${pad(kst.getUTCMonth()+1)}-${pad(kst.getUTCDate())}`;
       data.today = (data.daily || {})[todayKey] || 0;
       renderStatsModal(data);
     })
-    .catch(() => {
+    .catch(e => {
+      console.error('showStats 오류:', e);
       document.getElementById('stats-content').innerHTML =
         '<div class="stats-error">데이터를 불러오지 못했습니다.</div>';
     });
