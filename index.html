@@ -728,7 +728,9 @@
 /* ═══════════════════ DATA ═══════════════════ */
 const EXAM_DATE       = new Date(2026, 9, 31);   // Oct 31 2026
 const TODAY           = new Date();
-const FIREBASE_URL = ''; // ← Firebase 데이터베이스 URL (알려주시면 자동 입력됩니다)
+const STATS_OWNER = 'ykks1002-bot';
+const STATS_REPO  = 'gonginjung-planner-stats';
+const STATS_TOKEN = 'github_pat_11CCIWU2I0h66wi0U41kd3_BHcpceQb5SNJEXYkWPvv0ITxA6KuTDK6pdLKm3Z810FC6UOXDKCkSTE'; // ← 토큰 입력 후 자동 배포됩니다
 
 const CURRS = [
   { seq:1, name:'기초이론',          pri:7, l1:56,  l2:91  },
@@ -1812,58 +1814,38 @@ function saveMyPlanWithFeedback(btn) {
 
 /* ── 우측 고정 버튼들 스크롤 위치 제어 ── */
 /* ── 사용자 현황 추적 (GitHub 저장소 기반) ── */
-/* ── 사용자 현황 추적 (Firebase Realtime Database) ── */
+/* ── 사용자 현황 추적 (GitHub 저장소 기반) ── */
+const _FB = `https://api.github.com/repos/${STATS_OWNER}/${STATS_REPO}/contents`;
+
 async function trackEvent() {
-  if (!FIREBASE_URL) return;
+  if (!STATS_TOKEN) return;
   const pad = n => String(n).padStart(2,'0');
   const d = new Date();
-  // KST 기준 날짜 (UTC+9)
   const kst = new Date(d.getTime() + 9*3600000);
   const today = `${kst.getUTCFullYear()}-${pad(kst.getUTCMonth()+1)}-${pad(kst.getUTCDate())}`;
   try {
-    // Firebase POST: 이벤트 1건 추가 (race condition 없음)
-    await fetch(`${FIREBASE_URL}/events.json`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ target: S.target, hours: S.hours, date: today, ts: d.getTime() })
-    });
+    const hdrs = { Authorization:`Bearer ${STATS_TOKEN}`, Accept:'application/vnd.github+json', 'Content-Type':'application/json' };
+    const meta  = await fetch(`${_FB}/stats.json`, { headers: hdrs }).then(r => r.json());
+    const stats = JSON.parse(atob(meta.content.replace(/\n/g,'')));
+    stats.total = (stats.total||0) + 1;
+    if (S.target in stats.byTarget) stats.byTarget[S.target]++;
+    stats.daily[today] = (stats.daily[today]||0) + 1;
+    await fetch(`${_FB}/stats.json`, { method:'PUT', headers: hdrs,
+      body: JSON.stringify({ message:'stats', content: btoa(unescape(encodeURIComponent(JSON.stringify(stats,null,2)))), sha: meta.sha }) });
   } catch(e) {}
 }
 
 function showStats() {
   document.getElementById('stats-overlay').classList.add('open');
   document.getElementById('stats-content').innerHTML = '<div class="stats-loading">불러오는 중…</div>';
-  if (!FIREBASE_URL) {
-    document.getElementById('stats-content').innerHTML = `
-      <div class="stats-error" style="line-height:1.9">
-        Firebase URL이 설정되지 않았습니다.<br>
-        아래 순서로 설정 후 이 화면을 알려주세요.<br><br>
-        <strong>① firebase.google.com</strong> 접속<br>
-        <strong>② 프로젝트 추가</strong> → 이름 입력 → 계속 → 계속 → 프로젝트 만들기<br>
-        <strong>③ 빌드 → Realtime Database → 데이터베이스 만들기</strong><br>
-        → 위치: 기본값 → 테스트 모드로 시작 → 사용 설정<br>
-        <strong>④ 화면 상단의 URL 복사</strong><br>
-        <span style="font-size:.78rem;color:#64748b">(예: https://프로젝트명-default-rtdb.firebaseio.com)</span>
-      </div>`;
+  if (!STATS_TOKEN) {
+    document.getElementById('stats-content').innerHTML =
+      '<div class="stats-error">토큰이 설정되지 않았습니다.</div>';
     return;
   }
-  fetch(`${FIREBASE_URL}/events.json?t=` + Date.now())
+  fetch(`https://raw.githubusercontent.com/${STATS_OWNER}/${STATS_REPO}/main/stats.json?t=` + Date.now())
     .then(r => r.json())
-    .then(raw => {
-      const events = raw ? Object.values(raw) : [];
-      const pad = n => String(n).padStart(2,'0');
-      const d = new Date();
-      const kst = new Date(d.getTime() + 9*3600000);
-      const today = `${kst.getUTCFullYear()}-${pad(kst.getUTCMonth()+1)}-${pad(kst.getUTCDate())}`;
-      const stats = { total: events.length, today: 0,
-        byTarget: {'1차':0,'2차':0,'1+2차':0}, daily: {} };
-      events.forEach(e => {
-        if (e.date === today) stats.today++;
-        if (e.target in stats.byTarget) stats.byTarget[e.target]++;
-        stats.daily[e.date] = (stats.daily[e.date] || 0) + 1;
-      });
-      renderStatsModal(stats);
-    })
+    .then(renderStatsModal)
     .catch(() => {
       document.getElementById('stats-content').innerHTML =
         '<div class="stats-error">데이터를 불러오지 못했습니다.</div>';
