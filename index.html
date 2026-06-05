@@ -726,9 +726,9 @@
 
 <script>
 /* ═══════════════════ DATA ═══════════════════ */
-const EXAM_DATE  = new Date(2026, 9, 31);   // Oct 31 2026
-const TODAY      = new Date();
-const STATS_URL  = ''; // ← Google Apps Script 배포 URL 입력
+const EXAM_DATE       = new Date(2026, 9, 31);   // Oct 31 2026
+const TODAY           = new Date();
+const FIREBASE_URL = ''; // ← Firebase 데이터베이스 URL (알려주시면 자동 입력됩니다)
 
 const CURRS = [
   { seq:1, name:'기초이론',          pri:7, l1:56,  l2:91  },
@@ -1811,35 +1811,62 @@ function saveMyPlanWithFeedback(btn) {
 }
 
 /* ── 우측 고정 버튼들 스크롤 위치 제어 ── */
-/* ── 사용자 현황 추적 ───────────────────────── */
-function trackEvent() {
-  if (!STATS_URL) return;
-  const pad = n => String(n).padStart(2, '0');
-  const d   = S.startDate;
-  const dateStr = d ? `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}` : '';
-  const url = `${STATS_URL}?action=log&target=${encodeURIComponent(S.target)}&hours=${S.hours}&startDate=${dateStr}`;
-  fetch(url, { mode: 'no-cors' }).catch(() => {});
+/* ── 사용자 현황 추적 (GitHub 저장소 기반) ── */
+/* ── 사용자 현황 추적 (Firebase Realtime Database) ── */
+async function trackEvent() {
+  if (!FIREBASE_URL) return;
+  const pad = n => String(n).padStart(2,'0');
+  const d = new Date();
+  // KST 기준 날짜 (UTC+9)
+  const kst = new Date(d.getTime() + 9*3600000);
+  const today = `${kst.getUTCFullYear()}-${pad(kst.getUTCMonth()+1)}-${pad(kst.getUTCDate())}`;
+  try {
+    // Firebase POST: 이벤트 1건 추가 (race condition 없음)
+    await fetch(`${FIREBASE_URL}/events.json`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ target: S.target, hours: S.hours, date: today, ts: d.getTime() })
+    });
+  } catch(e) {}
 }
 
 function showStats() {
   document.getElementById('stats-overlay').classList.add('open');
   document.getElementById('stats-content').innerHTML = '<div class="stats-loading">불러오는 중…</div>';
-
-  if (!STATS_URL) {
+  if (!FIREBASE_URL) {
     document.getElementById('stats-content').innerHTML = `
-      <div class="stats-error">
-        Google Apps Script URL이 설정되지 않았습니다.<br>
-        HTML 파일의 <code>STATS_URL</code> 상수에 배포 URL을 입력해주세요.
+      <div class="stats-error" style="line-height:1.9">
+        Firebase URL이 설정되지 않았습니다.<br>
+        아래 순서로 설정 후 이 화면을 알려주세요.<br><br>
+        <strong>① firebase.google.com</strong> 접속<br>
+        <strong>② 프로젝트 추가</strong> → 이름 입력 → 계속 → 계속 → 프로젝트 만들기<br>
+        <strong>③ 빌드 → Realtime Database → 데이터베이스 만들기</strong><br>
+        → 위치: 기본값 → 테스트 모드로 시작 → 사용 설정<br>
+        <strong>④ 화면 상단의 URL 복사</strong><br>
+        <span style="font-size:.78rem;color:#64748b">(예: https://프로젝트명-default-rtdb.firebaseio.com)</span>
       </div>`;
     return;
   }
-
-  fetch(`${STATS_URL}?action=stats`)
+  fetch(`${FIREBASE_URL}/events.json?t=` + Date.now())
     .then(r => r.json())
-    .then(renderStatsModal)
+    .then(raw => {
+      const events = raw ? Object.values(raw) : [];
+      const pad = n => String(n).padStart(2,'0');
+      const d = new Date();
+      const kst = new Date(d.getTime() + 9*3600000);
+      const today = `${kst.getUTCFullYear()}-${pad(kst.getUTCMonth()+1)}-${pad(kst.getUTCDate())}`;
+      const stats = { total: events.length, today: 0,
+        byTarget: {'1차':0,'2차':0,'1+2차':0}, daily: {} };
+      events.forEach(e => {
+        if (e.date === today) stats.today++;
+        if (e.target in stats.byTarget) stats.byTarget[e.target]++;
+        stats.daily[e.date] = (stats.daily[e.date] || 0) + 1;
+      });
+      renderStatsModal(stats);
+    })
     .catch(() => {
       document.getElementById('stats-content').innerHTML =
-        '<div class="stats-error">데이터를 불러오지 못했습니다. URL 또는 Apps Script 설정을 확인해주세요.</div>';
+        '<div class="stats-error">데이터를 불러오지 못했습니다.</div>';
     });
 }
 
@@ -1848,13 +1875,14 @@ function closeStats() {
 }
 
 function renderStatsModal(data) {
-  const pad = n => String(n).padStart(2, '0');
+  const pad = n => String(n).padStart(2,'0');
   const days = [];
   for (let i = 6; i >= 0; i--) {
-    const d = new Date(TODAY);
-    d.setDate(d.getDate() - i);
-    const key = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-    days.push({ label: `${d.getMonth()+1}/${d.getDate()}`, cnt: (data.daily || {})[key] || 0 });
+    const d = new Date(TODAY.getTime() + 9*3600000);
+    d.setUTCDate(d.getUTCDate() - i);
+    const key = `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`;
+    const label = `${d.getUTCMonth()+1}/${d.getUTCDate()}`;
+    days.push({ label, cnt: (data.daily||{})[key]||0 });
   }
   const bt = data.byTarget || {};
   document.getElementById('stats-content').innerHTML = `
@@ -1868,17 +1896,17 @@ function renderStatsModal(data) {
     </div>
     <div class="stats-section-title">목표별 현황</div>
     <div class="stats-target-row">
-      <div class="stats-target-card"><div class="tc-lbl">1차</div><div class="tc-val">${bt['1차'] ?? 0}</div></div>
-      <div class="stats-target-card"><div class="tc-lbl">2차</div><div class="tc-val">${bt['2차'] ?? 0}</div></div>
-      <div class="stats-target-card"><div class="tc-lbl">동차</div><div class="tc-val">${bt['1+2차'] ?? 0}</div></div>
+      <div class="stats-target-card"><div class="tc-lbl">1차</div><div class="tc-val">${bt['1차']??0}</div></div>
+      <div class="stats-target-card"><div class="tc-lbl">2차</div><div class="tc-val">${bt['2차']??0}</div></div>
+      <div class="stats-target-card"><div class="tc-lbl">동차</div><div class="tc-val">${bt['1+2차']??0}</div></div>
     </div>
     <div class="stats-section-title">최근 7일</div>
     <table class="stats-daily-table">
       <thead><tr><th>날짜</th><th style="text-align:right">생성</th></tr></thead>
       <tbody>${days.map(d =>
-        `<tr><td>${d.label}</td><td>${d.cnt > 0 ? d.cnt + '건' : '-'}</td></tr>`
+        `<tr><td>${d.label}</td><td>${d.cnt>0?d.cnt+'건':'-'}</td></tr>`
       ).join('')}</tbody>
-    </table>`;
+    </table>`
 }
 
 function positionMyPlanBtn() {
