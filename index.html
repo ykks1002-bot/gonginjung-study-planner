@@ -548,6 +548,54 @@
 
     /* ── Hidden ─────────────────────────────────────── */
     #results { display: none; }
+
+    /* ── Stats modal ─────────────────────────────── */
+    #stats-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.45); z-index: 8000;
+      align-items: center; justify-content: center;
+    }
+    #stats-overlay.open { display: flex; }
+    .stats-box {
+      background: #fff; border-radius: 16px;
+      padding: 28px 28px 24px; width: min(440px, 92vw);
+      box-shadow: 0 20px 60px rgba(0,0,0,.25);
+      position: relative; max-height: 90vh; overflow-y: auto;
+    }
+    .stats-close {
+      position: absolute; top: 14px; right: 16px;
+      background: none; border: none; font-size: 1.1rem;
+      color: var(--gray-400); cursor: pointer; line-height: 1; padding: 4px;
+    }
+    .stats-close:hover { color: #334155; }
+    .stats-title { font-size: 1.05rem; font-weight: 800; color: #1e293b; margin-bottom: 18px; }
+    .stats-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 0; border-bottom: 1px solid var(--gray-200); font-size: .9rem;
+    }
+    .stats-row .s-lbl { color: var(--gray-500); }
+    .stats-row .s-val { font-weight: 700; color: #1e293b; font-size: 1rem; }
+    .stats-section-title {
+      font-size: .75rem; font-weight: 700; letter-spacing: .04em;
+      color: var(--blue); text-transform: uppercase; margin: 18px 0 8px;
+    }
+    .stats-target-row { display: flex; gap: 8px; margin-bottom: 4px; }
+    .stats-target-card {
+      flex: 1; text-align: center; background: var(--blue-light);
+      border-radius: 10px; padding: 10px 6px;
+    }
+    .stats-target-card .tc-lbl { font-size: .72rem; color: var(--blue); font-weight: 600; margin-bottom: 4px; }
+    .stats-target-card .tc-val { font-size: 1.3rem; font-weight: 800; color: #1e293b; }
+    .stats-daily-table { width: 100%; border-collapse: collapse; font-size: .83rem; }
+    .stats-daily-table th {
+      color: var(--gray-500); font-weight: 600; padding: 4px 8px;
+      text-align: left; border-bottom: 1px solid var(--gray-200);
+    }
+    .stats-daily-table td { padding: 5px 8px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+    .stats-daily-table td:last-child { text-align: right; font-weight: 700; color: var(--blue); }
+    .stats-loading { text-align: center; color: var(--gray-400); padding: 24px 0; font-size: .9rem; }
+    .stats-error { color: #dc2626; font-size: .84rem; padding: 12px 0; line-height: 1.7; }
+    .stats-error code { background: #fef2f2; padding: 2px 6px; border-radius: 4px; font-size: .78rem; font-family: monospace; }
   </style>
 </head>
 <body>
@@ -646,6 +694,17 @@
   z-index:1000;
   display:flex; flex-direction:column; gap:8px; align-items:stretch;
   transition: top .1s, right .1s;">
+  <button onclick="showStats()" style="
+    background:linear-gradient(135deg,#7c3aed,#8b5cf6);
+    color:#fff; border:2px solid rgba(255,255,255,.6);
+    border-radius:12px; padding:10px 14px;
+    font-size:.82rem; font-weight:700; cursor:pointer;
+    box-shadow:0 4px 16px rgba(124,58,237,.3);
+    transition:all .15s; text-align:center; min-width:130px;"
+    onmouseover="this.style.filter='brightness(1.1)'"
+    onmouseout="this.style.filter=''">
+    📊 사용 현황
+  </button>
   <div id="my-plan-btn" onclick="goMyPlan()" class="my-plan-btn" style="display:none;
     background:linear-gradient(135deg,#1e40af,#2563eb);
     border-color:rgba(255,255,255,.6);
@@ -667,8 +726,9 @@
 
 <script>
 /* ═══════════════════ DATA ═══════════════════ */
-const EXAM_DATE = new Date(2026, 9, 31);   // Oct 31 2026
-const TODAY     = new Date();
+const EXAM_DATE  = new Date(2026, 9, 31);   // Oct 31 2026
+const TODAY      = new Date();
+const STATS_URL  = ''; // ← Google Apps Script 배포 URL 입력
 
 const CURRS = [
   { seq:1, name:'기초이론',          pri:7, l1:56,  l2:91  },
@@ -718,6 +778,7 @@ const CAL_MAX = new Date(2026, 7, 31); // 8월 31일
 
   // 날짜 선택 달력 초기화
   renderCalendar();
+  positionMyPlanBtn();
 
   // Hours buttons: 2h ~ 8h+ (체크박스형)
   const hoursGroup = document.getElementById('hours-group');
@@ -1001,6 +1062,7 @@ function generate() {
   const dlBtn = document.getElementById('download-btn');
   if (dlBtn) dlBtn.style.display = 'block';
   positionMyPlanBtn();
+  trackEvent();
 }
 
 /* ── Gantt chart ────────────────────────────── */
@@ -1749,6 +1811,76 @@ function saveMyPlanWithFeedback(btn) {
 }
 
 /* ── 우측 고정 버튼들 스크롤 위치 제어 ── */
+/* ── 사용자 현황 추적 ───────────────────────── */
+function trackEvent() {
+  if (!STATS_URL) return;
+  const pad = n => String(n).padStart(2, '0');
+  const d   = S.startDate;
+  const dateStr = d ? `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}` : '';
+  const url = `${STATS_URL}?action=log&target=${encodeURIComponent(S.target)}&hours=${S.hours}&startDate=${dateStr}`;
+  fetch(url, { mode: 'no-cors' }).catch(() => {});
+}
+
+function showStats() {
+  document.getElementById('stats-overlay').classList.add('open');
+  document.getElementById('stats-content').innerHTML = '<div class="stats-loading">불러오는 중…</div>';
+
+  if (!STATS_URL) {
+    document.getElementById('stats-content').innerHTML = `
+      <div class="stats-error">
+        Google Apps Script URL이 설정되지 않았습니다.<br>
+        HTML 파일의 <code>STATS_URL</code> 상수에 배포 URL을 입력해주세요.
+      </div>`;
+    return;
+  }
+
+  fetch(`${STATS_URL}?action=stats`)
+    .then(r => r.json())
+    .then(renderStatsModal)
+    .catch(() => {
+      document.getElementById('stats-content').innerHTML =
+        '<div class="stats-error">데이터를 불러오지 못했습니다. URL 또는 Apps Script 설정을 확인해주세요.</div>';
+    });
+}
+
+function closeStats() {
+  document.getElementById('stats-overlay').classList.remove('open');
+}
+
+function renderStatsModal(data) {
+  const pad = n => String(n).padStart(2, '0');
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(TODAY);
+    d.setDate(d.getDate() - i);
+    const key = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    days.push({ label: `${d.getMonth()+1}/${d.getDate()}`, cnt: (data.daily || {})[key] || 0 });
+  }
+  const bt = data.byTarget || {};
+  document.getElementById('stats-content').innerHTML = `
+    <div class="stats-row">
+      <span class="s-lbl">오늘 계획 생성</span>
+      <span class="s-val">${data.today ?? 0}건</span>
+    </div>
+    <div class="stats-row">
+      <span class="s-lbl">전체 누적</span>
+      <span class="s-val">${data.total ?? 0}건</span>
+    </div>
+    <div class="stats-section-title">목표별 현황</div>
+    <div class="stats-target-row">
+      <div class="stats-target-card"><div class="tc-lbl">1차</div><div class="tc-val">${bt['1차'] ?? 0}</div></div>
+      <div class="stats-target-card"><div class="tc-lbl">2차</div><div class="tc-val">${bt['2차'] ?? 0}</div></div>
+      <div class="stats-target-card"><div class="tc-lbl">동차</div><div class="tc-val">${bt['1+2차'] ?? 0}</div></div>
+    </div>
+    <div class="stats-section-title">최근 7일</div>
+    <table class="stats-daily-table">
+      <thead><tr><th>날짜</th><th style="text-align:right">생성</th></tr></thead>
+      <tbody>${days.map(d =>
+        `<tr><td>${d.label}</td><td>${d.cnt > 0 ? d.cnt + '건' : '-'}</td></tr>`
+      ).join('')}</tbody>
+    </table>`;
+}
+
 function positionMyPlanBtn() {
   const container = document.getElementById('right-actions');
   if (!container) return;
@@ -1775,6 +1907,14 @@ function positionMyPlanBtn() {
 window.addEventListener('scroll', positionMyPlanBtn);
 window.addEventListener('resize', positionMyPlanBtn);
 </script>
+
+<div id="stats-overlay" onclick="if(event.target===this)closeStats()">
+  <div class="stats-box">
+    <button class="stats-close" onclick="closeStats()">✕</button>
+    <div class="stats-title">📊 사용자 현황</div>
+    <div id="stats-content"><div class="stats-loading">불러오는 중…</div></div>
+  </div>
+</div>
 
 </body>
 </html>
