@@ -1857,16 +1857,19 @@ function closeStats() {
 }
 
 function renderStatsModal(data) {
-  const pad = n => String(n).padStart(2,'0');
-  const days = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(TODAY.getTime() + 9*3600000);
-    d.setUTCDate(d.getUTCDate() - i);
-    const key = `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`;
-    const label = `${d.getUTCMonth()+1}/${d.getUTCDate()}`;
-    days.push({ label, cnt: (data.daily||{})[key]||0 });
-  }
   const bt = data.byTarget || {};
+
+  // daily 데이터를 월별로 집계
+  const monthMap = {};
+  Object.entries(data.daily || {}).forEach(([dateStr, cnt]) => {
+    const ym = dateStr.slice(0, 7); // "2026-06"
+    monthMap[ym] = (monthMap[ym] || 0) + cnt;
+  });
+  const months = Object.keys(monthMap).sort().map(ym => {
+    const [y, m] = ym.split('-');
+    return { label: `${y}년 ${parseInt(m)}월`, cnt: monthMap[ym] };
+  });
+
   document.getElementById('stats-content').innerHTML = `
     <div class="stats-row">
       <span class="s-lbl">오늘 계획 생성</span>
@@ -1882,12 +1885,12 @@ function renderStatsModal(data) {
       <div class="stats-target-card"><div class="tc-lbl">2차</div><div class="tc-val">${bt['2차']??0}</div></div>
       <div class="stats-target-card"><div class="tc-lbl">동차</div><div class="tc-val">${bt['1+2차']??0}</div></div>
     </div>
-    <div class="stats-section-title">최근 7일</div>
+    <div class="stats-section-title">월별 누적 현황</div>
     <table class="stats-daily-table">
-      <thead><tr><th>날짜</th><th style="text-align:right">생성</th></tr></thead>
-      <tbody>${days.map(d =>
-        `<tr><td>${d.label}</td><td>${d.cnt>0?d.cnt+'건':'-'}</td></tr>`
-      ).join('')}</tbody>
+      <thead><tr><th>월</th><th style="text-align:right">생성</th></tr></thead>
+      <tbody>${months.length ? months.map(m =>
+        `<tr><td>${m.label}</td><td>${m.cnt}건</td></tr>`
+      ).join('') : '<tr><td colspan="2" style="text-align:center;color:#94a3b8;padding:12px">데이터 없음</td></tr>'}</tbody>
     </table>`
 }
 
