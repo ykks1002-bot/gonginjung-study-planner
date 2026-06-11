@@ -592,7 +592,10 @@
       text-align: left; border-bottom: 1px solid var(--gray-200);
     }
     .stats-daily-table td { padding: 5px 8px; border-bottom: 1px solid #f1f5f9; color: #334155; }
-    .stats-daily-table td:last-child { text-align: right; font-weight: 700; color: var(--blue); }
+    .stats-daily-table td:not(:first-child),
+    .stats-daily-table th:not(:first-child) { text-align: right; }
+    .stats-daily-table .col-total { font-weight: 700; color: var(--blue); }
+    .stats-daily-table .col-target { color: #64748b; font-size: .8rem; }
     .stats-loading { text-align: center; color: var(--gray-400); padding: 24px 0; font-size: .9rem; }
     .stats-error { color: #dc2626; font-size: .84rem; padding: 12px 0; line-height: 1.7; }
     .stats-error code { background: #fef2f2; padding: 2px 6px; border-radius: 4px; font-size: .78rem; font-family: monospace; }
@@ -1845,7 +1848,15 @@ async function trackEvent() {
     const stats = JSON.parse(_b64dec(meta.content));
     stats.total = (stats.total||0) + 1;
     if (S.target in stats.byTarget) stats.byTarget[S.target]++;
-    stats.daily[today] = (stats.daily[today]||0) + 1;
+    // daily 항목: 숫자(구버전) → 객체로 마이그레이션
+    const prev = stats.daily[today];
+    const dayObj = (prev && typeof prev === 'object')
+      ? prev
+      : { total: (typeof prev === 'number' ? prev : 0), byTarget: {'1차':0,'2차':0,'1+2차':0} };
+    dayObj.total = (dayObj.total||0) + 1;
+    if (!dayObj.byTarget) dayObj.byTarget = {'1차':0,'2차':0,'1+2차':0};
+    if (S.target in dayObj.byTarget) dayObj.byTarget[S.target]++;
+    stats.daily[today] = dayObj;
     const putRes = await fetch(`${_FB}/stats.json`, { method:'PUT', headers: hdrs,
       body: JSON.stringify({ message:'stats', content: _b64enc(JSON.stringify(stats,null,2)), sha: meta.sha }) });
     if (!putRes.ok) console.error('stats 쓰기 실패:', putRes.status, await putRes.text());
@@ -1887,13 +1898,16 @@ function renderStatsModal(data) {
   const bt = data.byTarget || {};
   const daily = data.daily || {};
 
-  // 월별 집계 + 일별 목록
+  // 월별 집계 + 일별 목록 (구버전 숫자 포맷 호환)
   const monthMap = {};
-  Object.entries(daily).forEach(([dateStr, cnt]) => {
+  Object.entries(daily).forEach(([dateStr, entry]) => {
     const ym = dateStr.slice(0, 7);
-    if (!monthMap[ym]) monthMap[ym] = { total: 0, days: [] };
-    monthMap[ym].total += cnt;
-    monthMap[ym].days.push({ date: dateStr, cnt });
+    if (!monthMap[ym]) monthMap[ym] = { total: 0, byTarget: {'1차':0,'2차':0,'1+2차':0}, days: [] };
+    const dayTotal = (typeof entry === 'object' && entry) ? (entry.total||0) : (entry||0);
+    const dayBt    = (typeof entry === 'object' && entry && entry.byTarget) ? entry.byTarget : {'1차':0,'2차':0,'1+2차':0};
+    monthMap[ym].total += dayTotal;
+    ['1차','2차','1+2차'].forEach(k => { monthMap[ym].byTarget[k] = (monthMap[ym].byTarget[k]||0) + (dayBt[k]||0); });
+    monthMap[ym].days.push({ date: dateStr, total: dayTotal, byTarget: dayBt });
   });
 
   const months = Object.keys(monthMap).sort().reverse().map(ym => {
@@ -1902,19 +1916,26 @@ function renderStatsModal(data) {
     return { ym, label: `${y}년 ${parseInt(m)}월`, ...monthMap[ym] };
   });
 
+  const tgt = (obj, k) => obj[k] || 0;
   const monthRows = months.length ? months.map(mo => {
     const dayRows = mo.days.map(d => {
       const dd = parseInt(d.date.split('-')[2]);
       return `<tr class="stats-day-row" data-ym="${mo.ym}" style="display:none">
         <td style="padding-left:26px;font-size:.8rem">∟ ${dd}일</td>
-        <td>${d.cnt}건</td>
+        <td class="col-total">${d.total}건</td>
+        <td class="col-target">${tgt(d.byTarget,'1차')}</td>
+        <td class="col-target">${tgt(d.byTarget,'2차')}</td>
+        <td class="col-target">${tgt(d.byTarget,'1+2차')}</td>
       </tr>`;
     }).join('');
     return `<tr class="stats-month-row" onclick="toggleMonthRows('${mo.ym}',this)">
         <td><span class="stats-month-chevron">▶</span>${mo.label}</td>
-        <td>${mo.total}건</td>
+        <td class="col-total">${mo.total}건</td>
+        <td class="col-target">${tgt(mo.byTarget,'1차')}</td>
+        <td class="col-target">${tgt(mo.byTarget,'2차')}</td>
+        <td class="col-target">${tgt(mo.byTarget,'1+2차')}</td>
       </tr>${dayRows}`;
-  }).join('') : '<tr><td colspan="2" style="text-align:center;color:#94a3b8;padding:12px">데이터 없음</td></tr>';
+  }).join('') : '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:12px">데이터 없음</td></tr>';
 
   document.getElementById('stats-content').innerHTML = `
     <div class="stats-row">
@@ -1931,9 +1952,9 @@ function renderStatsModal(data) {
       <div class="stats-target-card"><div class="tc-lbl">2차</div><div class="tc-val">${bt['2차']??0}</div></div>
       <div class="stats-target-card"><div class="tc-lbl">동차</div><div class="tc-val">${bt['1+2차']??0}</div></div>
     </div>
-    <div class="stats-section-title">월별 누적 현황</div>
+    <div class="stats-section-title">월/일별 누적현황</div>
     <table class="stats-daily-table">
-      <thead><tr><th>월 / 일</th><th style="text-align:right">생성</th></tr></thead>
+      <thead><tr><th>월/일</th><th>총</th><th>1차</th><th>2차</th><th>동차</th></tr></thead>
       <tbody>${monthRows}</tbody>
     </table>`;
 }
