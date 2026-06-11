@@ -1902,12 +1902,17 @@ function renderStatsModal(data) {
   const monthMap = {};
   Object.entries(daily).forEach(([dateStr, entry]) => {
     const ym = dateStr.slice(0, 7);
-    if (!monthMap[ym]) monthMap[ym] = { total: 0, byTarget: {'1차':0,'2차':0,'1+2차':0}, days: [] };
-    const dayTotal = (typeof entry === 'object' && entry) ? (entry.total||0) : (entry||0);
-    const dayBt    = (typeof entry === 'object' && entry && entry.byTarget) ? entry.byTarget : {'1차':0,'2차':0,'1+2차':0};
+    if (!monthMap[ym]) monthMap[ym] = { total: 0, byTarget: {'1차':0,'2차':0,'1+2차':0}, days: [], hasBt: false };
+    const isObj   = typeof entry === 'object' && entry !== null;
+    const dayTotal = isObj ? (entry.total||0) : (entry||0);
+    const dayBt    = (isObj && entry.byTarget) ? entry.byTarget : null;
+    const dayHasBt = dayBt !== null;
     monthMap[ym].total += dayTotal;
-    ['1차','2차','1+2차'].forEach(k => { monthMap[ym].byTarget[k] = (monthMap[ym].byTarget[k]||0) + (dayBt[k]||0); });
-    monthMap[ym].days.push({ date: dateStr, total: dayTotal, byTarget: dayBt });
+    if (dayHasBt) {
+      monthMap[ym].hasBt = true;
+      ['1차','2차','1+2차'].forEach(k => { monthMap[ym].byTarget[k] = (monthMap[ym].byTarget[k]||0) + (dayBt[k]||0); });
+    }
+    monthMap[ym].days.push({ date: dateStr, total: dayTotal, byTarget: dayBt, hasBt: dayHasBt });
   });
 
   const months = Object.keys(monthMap).sort().reverse().map(ym => {
@@ -1916,24 +1921,25 @@ function renderStatsModal(data) {
     return { ym, label: `${y}년 ${parseInt(m)}월`, ...monthMap[ym] };
   });
 
-  const tgt = (obj, k) => obj[k] || 0;
+  const dash = '<span style="color:#cbd5e1">-</span>';
+  const fbt = (bt, hasBt, k) => hasBt ? (bt ? (bt[k]||0) : 0) : dash;
   const monthRows = months.length ? months.map(mo => {
     const dayRows = mo.days.map(d => {
       const dd = parseInt(d.date.split('-')[2]);
       return `<tr class="stats-day-row" data-ym="${mo.ym}" style="display:none">
         <td style="padding-left:26px;font-size:.8rem">∟ ${dd}일</td>
         <td class="col-total">${d.total}건</td>
-        <td class="col-target">${tgt(d.byTarget,'1차')}</td>
-        <td class="col-target">${tgt(d.byTarget,'2차')}</td>
-        <td class="col-target">${tgt(d.byTarget,'1+2차')}</td>
+        <td class="col-target">${fbt(d.byTarget,d.hasBt,'1차')}</td>
+        <td class="col-target">${fbt(d.byTarget,d.hasBt,'2차')}</td>
+        <td class="col-target">${fbt(d.byTarget,d.hasBt,'1+2차')}</td>
       </tr>`;
     }).join('');
     return `<tr class="stats-month-row" onclick="toggleMonthRows('${mo.ym}',this)">
         <td><span class="stats-month-chevron">▶</span>${mo.label}</td>
         <td class="col-total">${mo.total}건</td>
-        <td class="col-target">${tgt(mo.byTarget,'1차')}</td>
-        <td class="col-target">${tgt(mo.byTarget,'2차')}</td>
-        <td class="col-target">${tgt(mo.byTarget,'1+2차')}</td>
+        <td class="col-target">${fbt(mo.byTarget,mo.hasBt,'1차')}</td>
+        <td class="col-target">${fbt(mo.byTarget,mo.hasBt,'2차')}</td>
+        <td class="col-target">${fbt(mo.byTarget,mo.hasBt,'1+2차')}</td>
       </tr>${dayRows}`;
   }).join('') : '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:12px">데이터 없음</td></tr>';
 
