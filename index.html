@@ -596,6 +596,13 @@
     .stats-loading { text-align: center; color: var(--gray-400); padding: 24px 0; font-size: .9rem; }
     .stats-error { color: #dc2626; font-size: .84rem; padding: 12px 0; line-height: 1.7; }
     .stats-error code { background: #fef2f2; padding: 2px 6px; border-radius: 4px; font-size: .78rem; font-family: monospace; }
+    .stats-month-row { cursor: pointer; }
+    .stats-month-row:hover td { background: #f8fafc; }
+    .stats-month-row td { transition: background .15s; }
+    .stats-month-chevron { display: inline-block; font-size: .62rem; margin-right: 6px; color: var(--gray-400); transition: transform .18s; }
+    .stats-month-chevron.open { transform: rotate(90deg); }
+    .stats-day-row td:first-child { color: #94a3b8; }
+    .stats-day-row td:last-child { color: #64748b; font-weight: 600; }
   </style>
 </head>
 <body>
@@ -1878,17 +1885,36 @@ function closeStats() {
 
 function renderStatsModal(data) {
   const bt = data.byTarget || {};
+  const daily = data.daily || {};
 
-  // daily 데이터를 월별로 집계
+  // 월별 집계 + 일별 목록
   const monthMap = {};
-  Object.entries(data.daily || {}).forEach(([dateStr, cnt]) => {
-    const ym = dateStr.slice(0, 7); // "2026-06"
-    monthMap[ym] = (monthMap[ym] || 0) + cnt;
+  Object.entries(daily).forEach(([dateStr, cnt]) => {
+    const ym = dateStr.slice(0, 7);
+    if (!monthMap[ym]) monthMap[ym] = { total: 0, days: [] };
+    monthMap[ym].total += cnt;
+    monthMap[ym].days.push({ date: dateStr, cnt });
   });
-  const months = Object.keys(monthMap).sort().map(ym => {
+
+  const months = Object.keys(monthMap).sort().reverse().map(ym => {
     const [y, m] = ym.split('-');
-    return { label: `${y}년 ${parseInt(m)}월`, cnt: monthMap[ym] };
+    monthMap[ym].days.sort((a, b) => b.date.localeCompare(a.date));
+    return { ym, label: `${y}년 ${parseInt(m)}월`, ...monthMap[ym] };
   });
+
+  const monthRows = months.length ? months.map(mo => {
+    const dayRows = mo.days.map(d => {
+      const dd = parseInt(d.date.split('-')[2]);
+      return `<tr class="stats-day-row" data-ym="${mo.ym}" style="display:none">
+        <td style="padding-left:26px;font-size:.8rem">∟ ${dd}일</td>
+        <td>${d.cnt}건</td>
+      </tr>`;
+    }).join('');
+    return `<tr class="stats-month-row" onclick="toggleMonthRows('${mo.ym}',this)">
+        <td><span class="stats-month-chevron">▶</span>${mo.label}</td>
+        <td>${mo.total}건</td>
+      </tr>${dayRows}`;
+  }).join('') : '<tr><td colspan="2" style="text-align:center;color:#94a3b8;padding:12px">데이터 없음</td></tr>';
 
   document.getElementById('stats-content').innerHTML = `
     <div class="stats-row">
@@ -1907,11 +1933,18 @@ function renderStatsModal(data) {
     </div>
     <div class="stats-section-title">월별 누적 현황</div>
     <table class="stats-daily-table">
-      <thead><tr><th>월</th><th style="text-align:right">생성</th></tr></thead>
-      <tbody>${months.length ? months.map(m =>
-        `<tr><td>${m.label}</td><td>${m.cnt}건</td></tr>`
-      ).join('') : '<tr><td colspan="2" style="text-align:center;color:#94a3b8;padding:12px">데이터 없음</td></tr>'}</tbody>
-    </table>`
+      <thead><tr><th>월 / 일</th><th style="text-align:right">생성</th></tr></thead>
+      <tbody>${monthRows}</tbody>
+    </table>`;
+}
+
+function toggleMonthRows(ym, rowEl) {
+  const chevron = rowEl.querySelector('.stats-month-chevron');
+  const isOpen = chevron.classList.contains('open');
+  chevron.classList.toggle('open', !isOpen);
+  document.querySelectorAll(`.stats-day-row[data-ym="${ym}"]`).forEach(r => {
+    r.style.display = isOpen ? 'none' : 'table-row';
+  });
 }
 
 function positionMyPlanBtn() {
