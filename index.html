@@ -1880,7 +1880,10 @@ function showStats() {
       const pad = n => String(n).padStart(2,'0');
       const kst = new Date(Date.now() + 9*3600000);
       const todayKey = `${kst.getUTCFullYear()}-${pad(kst.getUTCMonth()+1)}-${pad(kst.getUTCDate())}`;
-      data.today = (data.daily || {})[todayKey] || 0;
+      const todayEntry = (data.daily || {})[todayKey];
+      data.today = todayEntry
+        ? (typeof todayEntry === 'object' ? (todayEntry.total || 0) : todayEntry)
+        : 0;
       renderStatsModal(data);
     })
     .catch(e => {
