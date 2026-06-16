@@ -1736,15 +1736,28 @@ async function downloadPDF(btn) {
     ganttSec.appendChild(ganttClone);
     wrap.appendChild(ganttSec);
 
-    // 월별 진도 섹션 (mo-grid 복제)
-    const moClone = document.getElementById('mo-grid').cloneNode(true);
-    const moSec = document.createElement('div');
-    moSec.style.cssText = 'padding:10px 24px 16px;';
-    moSec.innerHTML = `<div style="font-size:13px;font-weight:700;color:#334155;
+    // 나의 학습 현황 섹션 (stat-grid 복제)
+    const statClone = document.getElementById('stat-grid').cloneNode(true);
+    statClone.style.gridTemplateColumns = 'repeat(6, 1fr)';
+    const statSec = document.createElement('div');
+    statSec.style.cssText = 'padding:10px 24px 8px;';
+    statSec.innerHTML = `<div style="font-size:13px;font-weight:700;color:#334155;
       border-bottom:2px solid #e2e8f0;padding-bottom:8px;margin-bottom:10px;">
-      🗓️ 월별 학습 진도</div>`;
-    moSec.appendChild(moClone);
-    wrap.appendChild(moSec);
+      📊 나의 학습 현황</div>`;
+    statSec.appendChild(statClone);
+    wrap.appendChild(statSec);
+
+    // 실제 학습 순서 섹션 (study-path 복제)
+    const studyPathEl = document.querySelector('#curr-roadmap .study-path');
+    if (studyPathEl) {
+      const pathClone = studyPathEl.cloneNode(true);
+      const scrollEl = pathClone.querySelector('.sp-scroll');
+      if (scrollEl) scrollEl.style.overflow = 'visible';
+      const pathSec = document.createElement('div');
+      pathSec.style.cssText = 'padding:8px 24px 16px;';
+      pathSec.appendChild(pathClone);
+      wrap.appendChild(pathSec);
+    }
 
     // 푸터
     const today = new Date().toLocaleDateString('ko-KR');
