@@ -1574,6 +1574,18 @@ function renderWeekly(p) {
        </div>`
     : '';
 
+  // 2027년 목표 + 2026년 시작 → 일요일 복습/휴식 (주6일 강의)
+  const useSundayRest = S.year === 2027 && S.startDate.getFullYear() === 2026;
+
+  // 과목 순환 인덱스: useSundayRest면 일요일 제외 강의일수로 계산
+  function lecDayIdx(date) {
+    if (!useSundayRest) return Math.floor((date - startDate) / 864e5) % n;
+    let cnt = 0;
+    const tmp = new Date(startDate);
+    while (tmp < date) { if (tmp.getDay() !== 0) cnt++; tmp.setDate(tmp.getDate() + 1); }
+    return cnt % n;
+  }
+
   // 시작일이 포함된 주의 일요일 기준으로 2주 실제 스케줄 생성
   const firstSun = new Date(startDate);
   firstSun.setDate(firstSun.getDate() - firstSun.getDay()); // 해당 주 일요일
@@ -1585,12 +1597,14 @@ function renderWeekly(p) {
       const date = new Date(firstSun);
       date.setDate(firstSun.getDate() + w * 7 + d);
       const isPre = date < startDate;
+      const isSun = d === 0;
       if (isPre) {
         slots.push({ d: DAY_NAMES[d], empty: true });
+      } else if (useSundayRest && isSun) {
+        slots.push({ d: DAY_NAMES[d], rest: true });
       } else {
-        const daysSince = Math.floor((date - startDate) / 864e5);
-        const subjIdx   = daysSince % n;
-        slots.push({ d: DAY_NAMES[d], subj: subjs[subjIdx], cls: `s${subjIdx}` });
+        const idx = lecDayIdx(date);
+        slots.push({ d: DAY_NAMES[d], subj: subjs[idx], cls: `s${idx}` });
       }
     }
     rows.push({ label: `${w + 1}주차`, slots });
@@ -1609,6 +1623,8 @@ function renderWeekly(p) {
     row.slots.forEach(slot => {
       if (slot.empty) {
         html += `<td></td>`;
+      } else if (slot.rest) {
+        html += `<td class="sun-td"><span style="font-size:.73rem;color:var(--gray-400);">복습<br>휴식</span></td>`;
       } else {
         const short  = SHORT[slot.subj] || slot.subj;
         const isSun  = slot.d === '일';
@@ -1623,10 +1639,10 @@ function renderWeekly(p) {
 
   html += `</tbody></table></div>`;
 
-  const noteText = n === 2
-    ? '2과목이 하루씩 교대 순환합니다.'
-    : n === 4
-    ? '4과목이 하루씩 순환합니다.'
+  const noteText = useSundayRest
+    ? `${n}과목이 하루씩 순환합니다. 일요일은 복습/휴식.`
+    : n === 2 ? '2과목이 하루씩 교대 순환합니다.'
+    : n === 4 ? '4과목이 하루씩 순환합니다.'
     : '6과목이 하루씩 순환합니다.';
   html += `<div class="week-note">※ 매일 1과목씩 순환 수강 (연속 같은 과목 없음). ${noteText} 동일한 커리큘럼을 해당 과목 완강 시까지 반복합니다.</div>`;
 
@@ -1654,7 +1670,7 @@ function renderMonthly(p) {
     html += `<div class="mo-card">
       <div class="${isExam ? 'mo-head exam-head' : 'mo-head'}">
         <span style="white-space:nowrap;">${m}월${isExam ? ' 🎯' : ''}${badgeTxt ? `<span style="font-size:.7rem;background:rgba(255,255,255,.25);padding:2px 7px;border-radius:10px;margin-left:6px;">${badgeTxt}</span>` : ''}</span>
-        <span style="font-size:.75rem;opacity:.8;flex-shrink:0;white-space:nowrap;margin-left:4px;">${isExam ? `시험일 ${mYear}.10.31` : `학습 ${sd}일`}</span>
+        <span style="font-size:.75rem;opacity:.8;flex-shrink:0;white-space:nowrap;margin-left:4px;">${isExam ? `시험일 ${mYear}.10.${getExamDate().getDate()}` : `학습 ${sd}일`}</span>
       </div>
       <div class="mo-body">
         <div class="mo-meta">하루 ${lpd}강 × ${ld}일(${sundayRest ? '월~토' : '월~일'}) = 약 ${lec}강${sundayRest ? ' <span style="font-size:.7rem;color:var(--gray-500)">(일요일 복습/휴식)</span>' : ''}</div>`;
@@ -1798,8 +1814,11 @@ function renderMonthTableHTML(monthNum, allDays, monthYear) {
   };
 
   const examDate = getExamDate();
-  const isExamDay = d => d && d.date.getFullYear()===examDate.getFullYear() && d.date.getMonth()===9 && d.date.getDate()===31;
-  const isAppDay  = d => d && d.date.getFullYear()===2026 && d.date.getMonth()===7  && d.date.getDate()>=3 && d.date.getDate()<=7;
+  const isExamDay = d => d && d.date.getFullYear()===examDate.getFullYear() && d.date.getMonth()===9 && d.date.getDate()===examDate.getDate();
+  const isAppDay  = d => d && (
+    (d.date.getFullYear()===2026 && d.date.getMonth()===7 && d.date.getDate()>=3 && d.date.getDate()<=7) ||
+    (d.date.getFullYear()===2027 && d.date.getMonth()===7 && d.date.getDate()>=2 && d.date.getDate()<=6)
+  );
   const todayMid  = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
   const isPast    = d => d && d.date < todayMid;
 
@@ -1856,7 +1875,7 @@ function renderMonthTableHTML(monthNum, allDays, monthYear) {
     wk.forEach(d => {
       if (!d) { h += `<td style="${TD}background:#f1f5f9;"></td>`; return; }
       if (isExamDay(d)) {
-        h += `<td rowspan="2" style="${TD}background:#fef3c7;font-weight:700;color:#92400e;vertical-align:middle;font-size:8px;">🎯 제${mYear===2026?'37':'38'}회 시험일</td>`;
+        h += `<td rowspan="2" style="${TD}background:#fef3c7;font-weight:700;color:#92400e;vertical-align:middle;font-size:8px;">🎯 제${S.year===2026?'37':'38'}회 시험일</td>`;
         return;
       }
       const txt = isPast(d) ? '' : (d.subj ? (SUBJ_SHORT[d.subj]||d.subj) : '');
