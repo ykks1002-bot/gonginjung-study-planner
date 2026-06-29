@@ -1062,7 +1062,9 @@ function buildPlan() {
   }
 
   const lecDays = months.reduce((s, mo) => s + mo.ld, 0);
-  const capacity = months.reduce((s, mo) => s + mo.lec, 0);
+  // useSundayRest: lecDays includes exam day (Saturday); subtract 1
+  // non-sundayRest: totalDays already excludes exam day (original formula)
+  const capacity = useSundayRest ? (lecDays - 1) * lpd : totalDays * lpd;
   const totalNeeded = CURRS.reduce((s, c) => s + getLecturesForTarget(c, S.target), 0);
 
   const sorted = CURRS.map(c => ({ ...c, needed: getLecturesForTarget(c, S.target) }))
@@ -1083,18 +1085,15 @@ function buildPlan() {
   const contentRatio = (effectiveTotal > 0 && effectiveTotal < totalCap) ? effectiveTotal / totalCap : 1;
   months.forEach(mo => { mo.contentLec = Math.max(1, Math.round(mo.lec * contentRatio)); });
 
-  // 2027: 모든 커리큘럼을 시작 시점부터 사용 가능 (openM=0)
+  // 2027: 모든 커리큘럼 즉시 사용 가능(0 <= 어떤 mo.m도 항상 false)
+  // 2026: CURR_OPEN 절대 월 숫자(1~12)를 mo.m과 직접 비교 (원래 로직)
   const openMap = S.year === 2027
     ? { 1:0,2:0,3:0,4:0,5:0,6:0,7:0 }
     : CURR_OPEN;
 
-  // 월 offset 기준 openM 비교 (크로스-이어 대응)
-  const startOffset = startDate.getFullYear() * 12 + (startDate.getMonth());
-  const moOffset = mo => mo.year * 12 + (mo.m - 1) - startOffset;
-
   const seqActive = result
     .filter(c => c.status !== 'skipped').sort((a,b) => a.seq-b.seq)
-    .map(c => ({ seq:c.seq, name:c.name.replace(/<br>/g,''), remaining:c.effective, openMOffset:openMap[c.seq]||0 }));
+    .map(c => ({ seq:c.seq, name:c.name.replace(/<br>/g,''), remaining:c.effective, openM:openMap[c.seq]||0 }));
   let ci = 0;
   months.forEach(mo => {
     while (ci < seqActive.length && seqActive[ci].remaining <= 0) ci++;
@@ -1104,7 +1103,7 @@ function buildPlan() {
       if (ci >= seqActive.length) {
         sch.push({ name:'전 과정 최종 복습', pct:Math.round(cap/mo.contentLec*100), rev:true }); break;
       }
-      if (seqActive[ci].openMOffset > moOffset(mo)) {
+      if (seqActive[ci].openM > mo.m) {
         sch.push({ name:'부족한 과목 복습', pct:Math.round(cap/mo.contentLec*100), rev:true }); break;
       }
       const take = Math.min(seqActive[ci].remaining, cap);
