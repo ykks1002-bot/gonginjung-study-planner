@@ -662,7 +662,7 @@
         <button class="opt-btn" data-v="2026" onclick="pickYear(this)">2026년</button>
         <button class="opt-btn" data-v="2027" onclick="pickYear(this)">2027년</button>
       </div>
-      <div style="font-size:.78rem;color:var(--gray-500);margin-bottom:6px;">목표 과목</div>
+      <div style="font-size:.78rem;color:var(--gray-500);margin-bottom:6px;">시험 목표</div>
       <div class="opt-group" id="target-group">
         <button class="opt-btn" data-v="1차" onclick="pick(this,'target')">1차</button>
         <button class="opt-btn" data-v="2차" onclick="pick(this,'target')">2차</button>
@@ -771,7 +771,7 @@
 
 <script>
 /* ═══════════════════ DATA ═══════════════════ */
-const EXAM_DATES = { 2026: new Date(2026, 9, 31), 2027: new Date(2027, 9, 31) };
+const EXAM_DATES = { 2026: new Date(2026, 9, 31), 2027: new Date(2027, 9, 30) };
 function getExamDate() { return EXAM_DATES[S.year] || EXAM_DATES[2026]; }
 const TODAY = new Date();
 const STATS_OWNER = 'ykks1002-bot';
@@ -865,12 +865,12 @@ function pickYear(btn) {
   // 배너 업데이트
   const BANNER = {
     2026: { sub:'2026년 제37회 공인중개사 시험', date:'시험일 2026년 10월 31일 (토)', apply:'원서접수 2026.08.03 ~ 08.07' },
-    2027: { sub:'2027년 제38회 공인중개사 시험', date:'시험일 2027년 10월 31일 (토)', apply:'원서접수 2027년 예정' },
+    2027: { sub:'2027년 제38회 공인중개사 시험', date:'시험일 2027년 10월 30일 (금) (예정)', apply:'원서접수 2027.08.02 ~ 08.06 (예정)' },
   };
   const b = BANNER[S.year];
   document.getElementById('banner-sub').textContent  = b.sub;
   document.getElementById('banner-date').textContent = b.date;
-  document.getElementById('banner-apply').innerHTML  = `<div style="font-size:.8rem;opacity:.75;margin-bottom:2px;">원서접수</div><div style="font-weight:600;font-size:.88rem;">${S.year===2026?'2026.08.03 ~ 08.07':'2027년 예정'}</div>`;
+  document.getElementById('banner-apply').innerHTML  = `<div style="font-size:.8rem;opacity:.75;margin-bottom:2px;">원서접수</div><div style="font-weight:600;font-size:.88rem;">${S.year===2026?'2026.08.03 ~ 08.07':'2027.08.02 ~ 08.06 (예정)'}</div>`;
 
   // D-day 업데이트
   const examDate = getExamDate();
