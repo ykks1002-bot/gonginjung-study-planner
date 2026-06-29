@@ -1039,22 +1039,31 @@ function buildPlan() {
   let curY = startDate.getFullYear();
   const endM = 10, endY = examDate.getFullYear();
 
+  // 2027+동차 본학습의 2026년 월: 주6일 강의(일요일 복습/휴식)
+  const is6dayMonth = (y) => S.year === 2027 && S.target === '1+2차' && y === 2026;
+
   while (curY < endY || (curY === endY && curM <= endM)) {
-    const daysInM = allDaysInMonth(curM, curY);
-    let sd, ld;
-    if (curM === startDate.getMonth()+1 && curY === startDate.getFullYear()) {
-      sd = daysInM - startDate.getDate() + 1;
-      ld = sd;
+    const daysInM  = allDaysInMonth(curM, curY);
+    const startDay = (curM === startDate.getMonth()+1 && curY === startDate.getFullYear())
+      ? startDate.getDate() : 1;
+    const sd = daysInM - startDay + 1;
+    let ld;
+    if (is6dayMonth(curY)) {
+      // 일요일 제외하고 강의일 계산
+      ld = 0;
+      for (let day = startDay; day <= daysInM; day++) {
+        if (new Date(curY, curM - 1, day).getDay() !== 0) ld++;
+      }
     } else {
-      sd = daysInM; ld = daysInM;
+      ld = sd;
     }
-    months.push({ m: curM, year: curY, sd, ld, lec: ld * lpd });
+    months.push({ m: curM, year: curY, sd, ld, lec: ld * lpd, sundayRest: is6dayMonth(curY) });
     curM++;
     if (curM > 12) { curM = 1; curY++; }
   }
 
   const lecDays = months.reduce((s, mo) => s + mo.ld, 0);
-  const capacity = totalDays * lpd;
+  const capacity = months.reduce((s, mo) => s + mo.lec, 0);
   const totalNeeded = CURRS.reduce((s, c) => s + getLecturesForTarget(c, S.target), 0);
 
   const sorted = CURRS.map(c => ({ ...c, needed: getLecturesForTarget(c, S.target) }))
@@ -1632,7 +1641,7 @@ function renderMonthly(p) {
 
   let html = '';
 
-  months.forEach(({ m, year: mYear, sd, ld, sun, lec, contentLec, schedule }) => {
+  months.forEach(({ m, year: mYear, sd, ld, sun, lec, contentLec, schedule, sundayRest }) => {
     const items    = schedule || [];
     const isExam   = m === 10 && mYear === (S.year || 2026);
     const mainItem  = items.find(it => !it.rev) || null;
@@ -1650,7 +1659,7 @@ function renderMonthly(p) {
         <span style="font-size:.75rem;opacity:.8;flex-shrink:0;white-space:nowrap;margin-left:4px;">${isExam ? `시험일 ${mYear}.10.31` : `학습 ${sd}일`}</span>
       </div>
       <div class="mo-body">
-        <div class="mo-meta">하루 ${lpd}강 × ${ld}일(월~일) = 약 ${lec}강</div>`;
+        <div class="mo-meta">하루 ${lpd}강 × ${ld}일(${sundayRest ? '월~토' : '월~일'}) = 약 ${lec}강${sundayRest ? ' <span style="font-size:.7rem;color:var(--gray-500)">(일요일 복습/휴식)</span>' : ''}</div>`;
 
     if (currItems.length > 0) {
       currItems.forEach(it => {
@@ -1692,11 +1701,22 @@ function buildDailyPlanData(p) {
     const dow     = cur.getDay();
     const dayData = { date: new Date(cur), dow, subj: null };
 
+    const mo = moMap[`${cur.getFullYear()}-${cur.getMonth()+1}`];
+    const dow = cur.getDay();
+    const isSundayRest = mo && mo.sundayRest && dow === 0;
+
     if (cur < planStart) {
       dayData.lecLabel = ''; dayData.method = '';
+    } else if (isSundayRest) {
+      dayData.lecLabel = '복습/휴식'; dayData.method = '복습/휴식';
     } else {
-      const lecDayInMonth = cur.getDate();
-      const mo = moMap[`${cur.getFullYear()}-${cur.getMonth()+1}`];
+      // 강의 레이블: 월의 강의일 중 오늘이 몇 번째인지로 position 계산
+      const dayOfMonth = cur.getDate();
+      let lecDayInMonth = 0; // 이 달 1일~오늘까지의 강의일 수 (sundayRest 고려)
+      for (let d = 1; d <= dayOfMonth; d++) {
+        const ddow = new Date(cur.getFullYear(), cur.getMonth(), d).getDay();
+        if (!(mo && mo.sundayRest && ddow === 0)) lecDayInMonth++;
+      }
       let lecLabel = '전 과정 복습';
       if (mo && mo.schedule && mo.ld > 0) {
         const pos = lecDayInMonth / mo.ld;
@@ -1723,7 +1743,7 @@ function buildDailyPlanData(p) {
 
   // 2단계: 커리큘럼별 과목 동일 횟수 배분
   // 복습·미할당 레이블은 제외하고, 강의 커리큘럼 일자만 대상
-  const REVIEW_LABELS = new Set(['부족한 과목 복습', '전 과정 복습', '']);
+  const REVIEW_LABELS = new Set(['부족한 과목 복습', '전 과정 복습', '복습/휴식', '']);
   const currMap = {};
   days.forEach((d, i) => {
     if (d.method === '강의 수강' && !REVIEW_LABELS.has(d.lecLabel)) {
