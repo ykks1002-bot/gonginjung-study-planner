@@ -599,6 +599,31 @@
     .stats-loading { text-align: center; color: var(--gray-400); padding: 24px 0; font-size: .9rem; }
     .stats-error { color: #dc2626; font-size: .84rem; padding: 12px 0; line-height: 1.7; }
     .stats-error code { background: #fef2f2; padding: 2px 6px; border-radius: 4px; font-size: .78rem; font-family: monospace; }
+    /* ── Pre-study ──────────────────────────────── */
+    .ps-summary { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+    .ps-period-card { flex:1; min-width:160px; border-radius:10px; padding:12px 14px; }
+    .ps-period-card.kikyo { background:#eff6ff; border:1px solid #bfdbfe; }
+    .ps-period-card.kihon { background:#f0fdf4; border:1px solid #86efac; }
+    .ps-period-card .pc-lbl { font-size:.72rem; font-weight:700; margin-bottom:4px; }
+    .ps-period-card.kikyo .pc-lbl { color:#2563eb; }
+    .ps-period-card.kihon .pc-lbl { color:#16a34a; }
+    .ps-period-card .pc-date { font-size:.88rem; font-weight:700; color:#1e293b; }
+    .ps-period-card .pc-days { font-size:.75rem; color:var(--gray-500); margin-top:2px; }
+    .ps-week-box { background:var(--gray-50); border:1px solid var(--gray-200); border-radius:10px; padding:12px 14px; margin-bottom:14px; }
+    .ps-week-title { font-size:.78rem; font-weight:700; color:var(--gray-700); margin-bottom:8px; }
+    .ps-week-row { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+    .ps-day { text-align:center; border-radius:6px; padding:6px 3px; font-size:.72rem; font-weight:600; }
+    .ps-day.lec  { background:#eff6ff; color:#2563eb; }
+    .ps-day.rev  { background:#fef3c7; color:#b45309; }
+    .ps-day.rest { background:var(--gray-100); color:var(--gray-500); }
+    .ps-day .pd { font-size:.62rem; font-weight:400; opacity:.7; margin-top:1px; }
+    .ps-mo-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:12px; }
+    .ps-mo-card { border-radius:10px; overflow:hidden; border:1px solid var(--gray-200); }
+    .ps-mo-head { background:linear-gradient(135deg,#1e3a8a,#2563eb); color:#fff; padding:8px 12px; font-size:.83rem; font-weight:700; display:flex; justify-content:space-between; }
+    .ps-mo-body { padding:10px 12px; font-size:.78rem; }
+    .ps-mo-item { display:flex; justify-content:space-between; margin-bottom:6px; }
+    .ps-mo-lbl { color:var(--gray-500); }
+    .ps-mo-val { font-weight:700; color:var(--blue); }
     .stats-month-row { cursor: pointer; }
     .stats-month-row:hover td { background: #f8fafc; }
     .stats-month-row td { transition: background .15s; }
@@ -620,12 +645,10 @@
   <!-- Exam info banner -->
   <div class="exam-banner">
     <div>
-      <div class="sub">2026년 제37회 공인중개사 시험</div>
-      <div class="main-date">시험일&nbsp; 2026년 10월 31일 (토)</div>
+      <div class="sub" id="banner-sub">시험 연도를 선택해주세요</div>
+      <div class="main-date" id="banner-date">공인중개사 학습계획 플래너</div>
     </div>
-    <div style="text-align:right;">
-      <div class="sub">원서접수</div>
-      <div style="font-weight:600;">2026.08.03 ~ 08.07</div>
+    <div style="text-align:right;" id="banner-apply">
     </div>
     <div class="dday" id="dday-text"></div>
   </div>
@@ -634,6 +657,12 @@
     <!-- Step 1 -->
     <div class="card">
       <h2><span class="step-num">1</span>시험 목표 선택</h2>
+      <div style="font-size:.78rem;color:var(--gray-500);margin-bottom:6px;">시험 연도</div>
+      <div class="opt-group" id="year-group" style="margin-bottom:14px;">
+        <button class="opt-btn" data-v="2026" onclick="pickYear(this)">2026년</button>
+        <button class="opt-btn" data-v="2027" onclick="pickYear(this)">2027년</button>
+      </div>
+      <div style="font-size:.78rem;color:var(--gray-500);margin-bottom:6px;">목표 과목</div>
       <div class="opt-group" id="target-group">
         <button class="opt-btn" data-v="1차" onclick="pick(this,'target')">1차</button>
         <button class="opt-btn" data-v="2차" onclick="pick(this,'target')">2차</button>
@@ -662,6 +691,12 @@
 
   <!-- Results -->
   <div id="results">
+
+    <!-- Pre-study (2027 only) -->
+    <div class="card" id="prestudy-card" style="display:none;">
+      <div class="results-header">📗 선행학습 기간 (기초이론 → 기본이론)</div>
+      <div id="prestudy-content"></div>
+    </div>
 
     <!-- Summary -->
     <div class="card">
@@ -736,8 +771,9 @@
 
 <script>
 /* ═══════════════════ DATA ═══════════════════ */
-const EXAM_DATE       = new Date(2026, 9, 31);   // Oct 31 2026
-const TODAY           = new Date();
+const EXAM_DATES = { 2026: new Date(2026, 9, 31), 2027: new Date(2027, 9, 31) };
+function getExamDate() { return EXAM_DATES[S.year] || EXAM_DATES[2026]; }
+const TODAY = new Date();
 const STATS_OWNER = 'ykks1002-bot';
 const STATS_REPO  = 'gonginjung-planner-stats';
 const STATS_TOKEN = (()=>{const a=[103,104,112,95,67,105,74,105,122,87,52,52,89,117,77,116,109,107,119,118,107,84,56,109,73,65,99,81,119,107,55,80,110,99,48,68,118,67,73,105];return a.map(c=>String.fromCharCode(c)).join('');})();
@@ -772,21 +808,19 @@ const SHORT = {
 };
 
 /* ═══════════════════ STATE ═══════════════════ */
-const S = { target: null, month: null, startDate: null, hours: null };
+const S = { year: null, target: null, month: null, startDate: null, hours: null };
 const MY_PLAN_KEY = 'gjp_my_plan';
 
 /* ── 달력 변수 ── */
 let calYear  = TODAY.getFullYear();
 let calMonth = TODAY.getMonth();
 const CAL_MIN = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
-const CAL_MAX = new Date(2026, 7, 31); // 8월 31일
+let   calMax  = new Date(2026, 11, 31); // 연도 선택 전 기본값
 
 /* ═══════════════════ INIT ════════════════════ */
 (function init() {
-  // D-day (자정 기준으로 계산)
-  const todayMid = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
-  const diff = Math.ceil((EXAM_DATE - todayMid) / 864e5);
-  document.getElementById('dday-text').textContent = `오늘부터 시험까지 D-${diff}일 남았습니다`;
+  // D-day 초기값 (연도 선택 전)
+  document.getElementById('dday-text').textContent = '연도를 선택하면 D-day가 표시됩니다';
 
   // 날짜 선택 달력 초기화
   renderCalendar();
@@ -817,6 +851,34 @@ const CAL_MAX = new Date(2026, 7, 31); // 8월 31일
 })();
 
 /* ═══════════════════ UI helpers ══════════════ */
+function pickYear(btn) {
+  document.getElementById('year-group').querySelectorAll('.opt-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  S.year = parseInt(btn.dataset.v);
+
+  // 달력 범위 업데이트
+  calMax = S.year === 2027 ? new Date(2027, 8, 30) : new Date(2026, 11, 31);
+  // 현재 선택 날짜가 범위 초과면 리셋
+  if (S.startDate && S.startDate > calMax) { S.startDate = null; S.month = null; }
+  renderCalendar();
+
+  // 배너 업데이트
+  const BANNER = {
+    2026: { sub:'2026년 제37회 공인중개사 시험', date:'시험일 2026년 10월 31일 (토)', apply:'원서접수 2026.08.03 ~ 08.07' },
+    2027: { sub:'2027년 제38회 공인중개사 시험', date:'시험일 2027년 10월 31일 (토)', apply:'원서접수 2027년 예정' },
+  };
+  const b = BANNER[S.year];
+  document.getElementById('banner-sub').textContent  = b.sub;
+  document.getElementById('banner-date').textContent = b.date;
+  document.getElementById('banner-apply').innerHTML  = `<div style="font-size:.8rem;opacity:.75;margin-bottom:2px;">원서접수</div><div style="font-weight:600;font-size:.88rem;">${S.year===2026?'2026.08.03 ~ 08.07':'2027년 예정'}</div>`;
+
+  // D-day 업데이트
+  const examDate = getExamDate();
+  const todayMid = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
+  const diff = Math.ceil((examDate - todayMid) / 864e5);
+  document.getElementById('dday-text').textContent = `D-${diff}일`;
+}
+
 function pick(btn, key) {
   btn.closest('.opt-group').querySelectorAll('.opt-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -829,7 +891,7 @@ function renderCalendar() {
   const firstDow  = new Date(calYear, calMonth, 1).getDay();
   const daysInM   = new Date(calYear, calMonth + 1, 0).getDate();
   const prevDisabled = new Date(calYear, calMonth, 1) <= new Date(CAL_MIN.getFullYear(), CAL_MIN.getMonth(), 1);
-  const nextDisabled = new Date(calYear, calMonth, 1) >= new Date(CAL_MAX.getFullYear(), CAL_MAX.getMonth(), 1);
+  const nextDisabled = new Date(calYear, calMonth, 1) >= new Date(calMax.getFullYear(), calMax.getMonth(), 1);
   const monthNames   = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
   const dayNames     = ['일','월','화','수','목','금','토'];
 
@@ -852,7 +914,7 @@ function renderCalendar() {
     const date    = new Date(calYear, calMonth, d);
     const dow     = date.getDay();
     const isPast  = date < CAL_MIN;
-    const isOver  = date > CAL_MAX;
+    const isOver  = date > calMax;
     const isToday = date.getTime() === CAL_MIN.getTime();
     const isSel   = S.startDate &&
       date.getFullYear() === S.startDate.getFullYear() &&
@@ -946,14 +1008,12 @@ function updateHoursHint() {
 // 1강 ≈ 60분 → 하루 N시간 = N강 (시간 = 강의수 동일)
 function lecturesPerDay(h) { return h; }
 
-// 한 달의 전체 날수 (일요일 포함, 모든 날 학습)
-function allDaysInMonth(month) {
-  return new Date(2026, month, 0).getDate();
+// 한 달의 전체 날수
+function allDaysInMonth(month, year) {
+  return new Date(year || 2026, month, 0).getDate();
 }
-
-// 한 달의 강의 수강 가능일 (월~일, 7일 전체)
-function lectureDaysInMonth(month) {
-  return allDaysInMonth(month);
+function lectureDaysInMonth(month, year) {
+  return allDaysInMonth(month, year);
 }
 
 function getLecturesForTarget(c, target) {
@@ -963,70 +1023,70 @@ function getLecturesForTarget(c, target) {
 }
 
 function buildPlan() {
-  const startDate   = S.startDate;
-  const startMonth  = startDate.getMonth() + 1;
-  const startMid    = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-  const totalDays   = Math.ceil((EXAM_DATE - startMid) / 864e5);
-  const lpd         = lecturesPerDay(S.hours);
+  const examDate  = getExamDate();
+  // 2027년: 선행학습 후 본학습 시작일 = Nov 1, 2026 (또는 startDate가 그 이후면 startDate)
+  const PRE_END   = new Date(2026, 10, 1); // Nov 1 2026 (선행학습 종료 다음날)
+  const is2027Pre = S.year === 2027 && S.startDate < PRE_END;
+  const startDate = is2027Pre ? PRE_END : S.startDate;
 
-  // 월별 데이터 계산 (시작 월은 시작일 이후만 집계)
+  const startMid  = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+  const totalDays = Math.ceil((examDate - startMid) / 864e5);
+  const lpd       = lecturesPerDay(S.hours);
+
+  // 크로스-이어 월 리스트 생성 (2026: startMonth~10월, 2027: startMonth~2027.10)
   const months = [];
-  for (let m = startMonth; m <= 10; m++) {
-    let sd, ld;
-    if (m === startMonth) {
-      const daysInM  = new Date(2026, m, 0).getDate();
-      const startDay = startDate.getDate();
-      sd = daysInM - startDay + 1;
-      ld = sd; // 일요일 포함 전일 수강
-    } else {
-      sd = allDaysInMonth(m);
-      ld = lectureDaysInMonth(m);
-    }
-    const lec = ld * lpd;
-    months.push({ m, sd, ld, lec });
-  }
-  const lecDays = months.reduce((s, mo) => s + mo.ld, 0);
-  const capacity = totalDays * lpd; // 시험일 제외 학습 가능 일수 × 하루 강의수
+  let curM = startDate.getMonth() + 1;
+  let curY = startDate.getFullYear();
+  const endM = 10, endY = examDate.getFullYear();
 
+  while (curY < endY || (curY === endY && curM <= endM)) {
+    const daysInM = allDaysInMonth(curM, curY);
+    let sd, ld;
+    if (curM === startDate.getMonth()+1 && curY === startDate.getFullYear()) {
+      sd = daysInM - startDate.getDate() + 1;
+      ld = sd;
+    } else {
+      sd = daysInM; ld = daysInM;
+    }
+    months.push({ m: curM, year: curY, sd, ld, lec: ld * lpd });
+    curM++;
+    if (curM > 12) { curM = 1; curY++; }
+  }
+
+  const lecDays = months.reduce((s, mo) => s + mo.ld, 0);
+  const capacity = totalDays * lpd;
   const totalNeeded = CURRS.reduce((s, c) => s + getLecturesForTarget(c, S.target), 0);
 
-  // 우선순위 기준으로 커리큘럼 포함 여부 결정
-  const sorted = CURRS.map(c => ({
-    ...c,
-    needed: getLecturesForTarget(c, S.target),
-  })).sort((a, b) => a.pri - b.pri);
+  const sorted = CURRS.map(c => ({ ...c, needed: getLecturesForTarget(c, S.target) }))
+    .sort((a, b) => a.pri - b.pri);
 
   let rem = capacity;
   sorted.forEach(c => {
-    if (rem >= c.needed) {
-      c.status = 'full'; c.effective = c.needed; rem -= c.needed;
-    } else {
-      c.status = 'skipped'; c.effective = 0;
-    }
+    if (rem >= c.needed) { c.status='full'; c.effective=c.needed; rem -= c.needed; }
+    else { c.status='skipped'; c.effective=0; }
   });
 
   const result = CURRS.map(orig => sorted.find(c => c.seq === orig.seq));
-
   const coveragePct = Math.min(100, Math.round(capacity / totalNeeded * 100));
   const fullCount   = result.filter(c => c.status === 'full').length;
 
-  // 용량이 남을 경우 커리큘럼을 10월까지 고르게 배분
-  // (매달 contentLec = 실제 커리큘럼 진도 단위, lec = 실제 수강 강의수)
-  const effectiveTotal = result
-    .filter(c => c.status !== 'skipped')
-    .reduce((s, c) => s + c.effective, 0);
+  const effectiveTotal = result.filter(c => c.status !== 'skipped').reduce((s, c) => s + c.effective, 0);
   const totalCap = months.reduce((s, mo) => s + mo.lec, 0);
-  const contentRatio = (effectiveTotal > 0 && effectiveTotal < totalCap)
-    ? effectiveTotal / totalCap : 1;
-  months.forEach(mo => {
-    mo.contentLec = Math.max(1, Math.round(mo.lec * contentRatio));
-  });
+  const contentRatio = (effectiveTotal > 0 && effectiveTotal < totalCap) ? effectiveTotal / totalCap : 1;
+  months.forEach(mo => { mo.contentLec = Math.max(1, Math.round(mo.lec * contentRatio)); });
 
-  // 오픈 월 기반 월별 스케줄 계산
+  // 2027: 모든 커리큘럼을 시작 시점부터 사용 가능 (openM=0)
+  const openMap = S.year === 2027
+    ? { 1:0,2:0,3:0,4:0,5:0,6:0,7:0 }
+    : CURR_OPEN;
+
+  // 월 offset 기준 openM 비교 (크로스-이어 대응)
+  const startOffset = startDate.getFullYear() * 12 + (startDate.getMonth());
+  const moOffset = mo => mo.year * 12 + (mo.m - 1) - startOffset;
+
   const seqActive = result
-    .filter(c => c.status !== 'skipped')
-    .sort((a, b) => a.seq - b.seq)
-    .map(c => ({ seq:c.seq, name:c.name.replace(/<br>/g,''), remaining:c.effective, openM:CURR_OPEN[c.seq]||0 }));
+    .filter(c => c.status !== 'skipped').sort((a,b) => a.seq-b.seq)
+    .map(c => ({ seq:c.seq, name:c.name.replace(/<br>/g,''), remaining:c.effective, openMOffset:openMap[c.seq]||0 }));
   let ci = 0;
   months.forEach(mo => {
     while (ci < seqActive.length && seqActive[ci].remaining <= 0) ci++;
@@ -1036,7 +1096,7 @@ function buildPlan() {
       if (ci >= seqActive.length) {
         sch.push({ name:'전 과정 최종 복습', pct:Math.round(cap/mo.contentLec*100), rev:true }); break;
       }
-      if (seqActive[ci].openM > mo.m) {
+      if (seqActive[ci].openMOffset > moOffset(mo)) {
         sch.push({ name:'부족한 과목 복습', pct:Math.round(cap/mo.contentLec*100), rev:true }); break;
       }
       const take = Math.min(seqActive[ci].remaining, cap);
@@ -1049,14 +1109,132 @@ function buildPlan() {
     mo.schedule = sch;
   });
 
-  return { totalDays, lecDays, capacity, totalNeeded, coveragePct, fullCount, result, months, lpd };
+  return { totalDays, lecDays, capacity, totalNeeded, coveragePct, fullCount, result, months, lpd, is2027Pre };
+}
+
+/* ══════════ 선행학습 (2027년 전용) ══════════ */
+function buildPreStudyPlan() {
+  const startMid  = new Date(S.startDate.getFullYear(), S.startDate.getMonth(), S.startDate.getDate());
+  const preEnd    = new Date(2026, 9, 31); // Oct 31, 2026 포함
+  const totalDays = Math.ceil((preEnd - startMid) / 864e5) + 1; // 포함
+
+  const kikyoDays = Math.floor(totalDays / 2);
+  const kihonDays = totalDays - kikyoDays;
+
+  const kikyoEnd   = new Date(startMid); kikyoEnd.setDate(kikyoEnd.getDate() + kikyoDays - 1);
+  const kihonStart = new Date(kikyoEnd);  kihonStart.setDate(kihonStart.getDate() + 1);
+
+  // 월별 요약 생성
+  const months = [];
+  let curM = S.startDate.getMonth() + 1, curY = S.startDate.getFullYear();
+  while (curY < 2026 || (curY === 2026 && curM <= 10)) {
+    const daysInM  = allDaysInMonth(curM, curY);
+    const mStart   = new Date(curY, curM - 1, 1);
+    const mEnd     = new Date(curY, curM, 0);
+    const rangeS   = curM === S.startDate.getMonth()+1 && curY === S.startDate.getFullYear() ? startMid : mStart;
+    const rangeE   = mEnd < preEnd ? mEnd : preEnd;
+
+    let lecDays=0, revDays=0, restDays=0;
+    const d = new Date(rangeS);
+    while (d <= rangeE) {
+      const dow = d.getDay();
+      if (dow===0) restDays++;
+      else if (dow===5||dow===6) revDays++;
+      else lecDays++;
+      d.setDate(d.getDate()+1);
+    }
+
+    let kikyoLec=0, kihonLec=0;
+    const d2 = new Date(rangeS);
+    while (d2 <= rangeE) {
+      const dow = d2.getDay();
+      if (dow>0 && dow<5) {
+        if (d2 <= kikyoEnd) kikyoLec++;
+        else kihonLec++;
+      }
+      d2.setDate(d2.getDate()+1);
+    }
+
+    months.push({ m:curM, year:curY, lecDays, revDays, restDays, kikyoLec, kihonLec });
+    curM++; if (curM>12){curM=1;curY++;}
+  }
+
+  return { startDate:startMid, preEnd, kikyoEnd, kihonStart, totalDays, kikyoDays, kihonDays, months };
+}
+
+function renderPreStudy(ps) {
+  const fmt = d => `${d.getMonth()+1}월 ${d.getDate()}일`;
+  const DAY_NAMES = ['일','월','화','수','목','금','토'];
+  const DOW_TYPE  = [
+    {t:'rest',lbl:'휴식',sub:'일'},
+    {t:'lec', lbl:'강의',sub:'월'},
+    {t:'lec', lbl:'강의',sub:'화'},
+    {t:'lec', lbl:'강의',sub:'수'},
+    {t:'lec', lbl:'강의',sub:'목'},
+    {t:'rev', lbl:'복습',sub:'금'},
+    {t:'rev', lbl:'복습',sub:'토'},
+  ];
+
+  let html = `
+    <div class="ps-summary">
+      <div class="ps-period-card kikyo">
+        <div class="pc-lbl">📘 기초이론 기간</div>
+        <div class="pc-date">${fmt(ps.startDate)} ~ ${fmt(ps.kikyoEnd)}</div>
+        <div class="pc-days">${ps.kikyoDays}일</div>
+      </div>
+      <div class="ps-period-card kihon">
+        <div class="pc-lbl">📗 기본이론 기간</div>
+        <div class="pc-date">${fmt(ps.kihonStart)} ~ ${fmt(ps.preEnd)}</div>
+        <div class="pc-days">${ps.kihonDays}일</div>
+      </div>
+    </div>
+    <div class="ps-week-box">
+      <div class="ps-week-title">주간 스케줄 패턴 (매주 반복)</div>
+      <div class="ps-week-row">
+        ${DOW_TYPE.map(({t,lbl,sub}) => `
+          <div class="ps-day ${t}">
+            <div>${sub}</div>
+            <div class="pd">${lbl}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="ps-mo-grid">`;
+
+  ps.months.forEach(mo => {
+    html += `<div class="ps-mo-card">
+      <div class="ps-mo-head"><span>${mo.m}월</span></div>
+      <div class="ps-mo-body">
+        <div class="ps-mo-item"><span class="ps-mo-lbl">강의 수강일</span><span class="ps-mo-val">${mo.lecDays}일</span></div>
+        <div class="ps-mo-item"><span class="ps-mo-lbl">복습일</span><span class="ps-mo-val">${mo.revDays}일</span></div>
+        <div class="ps-mo-item"><span class="ps-mo-lbl">휴식일</span><span class="ps-mo-val">${mo.restDays}일</span></div>
+        ${mo.kikyoLec>0?`<div class="ps-mo-item"><span class="ps-mo-lbl">📘 기초이론</span><span class="ps-mo-val">${mo.kikyoLec}일</span></div>`:''}
+        ${mo.kihonLec>0?`<div class="ps-mo-item"><span class="ps-mo-lbl">📗 기본이론</span><span class="ps-mo-val">${mo.kihonLec}일</span></div>`:''}
+      </div>
+    </div>`;
+  });
+
+  html += `</div>`;
+  document.getElementById('prestudy-content').innerHTML = html;
 }
 
 /* ═══════════════════ RENDER ══════════════════ */
 function generate() {
-  if (!S.target || !S.startDate || !S.hours) {
-    alert('시험 목표, 시작 월, 학습 시간을 모두 선택해주세요.');
+  if (!S.year || !S.target || !S.startDate || !S.hours) {
+    alert('시험 연도, 목표, 시작일, 학습 시간을 모두 선택해주세요.');
     return;
+  }
+
+  // 2027년 선행학습
+  const PRE_END = new Date(2026, 10, 1);
+  const preStudyCard = document.getElementById('prestudy-card');
+  if (S.year === 2027 && S.startDate < PRE_END) {
+    const ps = buildPreStudyPlan();
+    window._preStudy = ps;
+    renderPreStudy(ps);
+    preStudyCard.style.display = '';
+  } else {
+    preStudyCard.style.display = 'none';
+    window._preStudy = null;
   }
 
   const p = buildPlan();
@@ -1205,7 +1383,7 @@ function renderStats(p) {
 /* ── My plan (last settings) ────────────────── */
 function saveMyPlan() {
   localStorage.setItem(MY_PLAN_KEY, JSON.stringify({
-    target: S.target, month: S.month, hours: S.hours,
+    year: S.year, target: S.target, month: S.month, hours: S.hours,
     startDate: S.startDate ? S.startDate.toISOString() : null
   }));
   updateMyPlanBtn();
@@ -1234,7 +1412,14 @@ function updateMyPlanBtn() {
 function goMyPlan() {
   const saved = loadMyPlan();
   if (!saved) return;
-  document.querySelectorAll('.opt-btn').forEach(b =>
+  // 연도 복원
+  if (saved.year) {
+    document.querySelectorAll('#year-group .opt-btn').forEach(b =>
+      b.classList.toggle('active', +b.dataset.v === saved.year));
+    S.year = saved.year;
+    calMax = S.year === 2027 ? new Date(2027, 8, 30) : new Date(2026, 11, 31);
+  }
+  document.querySelectorAll('#target-group .opt-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.v === saved.target));
   S.target = saved.target;
   // 날짜 복원
@@ -1261,7 +1446,7 @@ function goMyPlan() {
 
 /* ── Progress localStorage helpers ─────────── */
 function progressKey() {
-  return `gjp_${S.target}_${S.month}_${S.hours}`;
+  return `gjp_${S.year||2026}_${S.target}_${S.month}_${S.hours}`;
 }
 function getProgress() {
   try { return new Set(JSON.parse(localStorage.getItem(progressKey()) || '[]')); }
@@ -1447,9 +1632,9 @@ function renderMonthly(p) {
 
   let html = '';
 
-  months.forEach(({ m, sd, ld, sun, lec, contentLec, schedule }) => {
+  months.forEach(({ m, year: mYear, sd, ld, sun, lec, contentLec, schedule }) => {
     const items    = schedule || [];
-    const isExam   = m === 10;
+    const isExam   = m === 10 && mYear === (S.year || 2026);
     const mainItem  = items.find(it => !it.rev) || null;
     const currItems = items.filter(it => !it.rev);
     const BADGE_SHORT = {
@@ -1462,7 +1647,7 @@ function renderMonthly(p) {
     html += `<div class="mo-card">
       <div class="${isExam ? 'mo-head exam-head' : 'mo-head'}">
         <span style="white-space:nowrap;">${m}월${isExam ? ' 🎯' : ''}${badgeTxt ? `<span style="font-size:.7rem;background:rgba(255,255,255,.25);padding:2px 7px;border-radius:10px;margin-left:6px;">${badgeTxt}</span>` : ''}</span>
-        <span style="font-size:.75rem;opacity:.8;flex-shrink:0;white-space:nowrap;margin-left:4px;">${isExam ? '시험일 10.31' : `학습 ${sd}일`}</span>
+        <span style="font-size:.75rem;opacity:.8;flex-shrink:0;white-space:nowrap;margin-left:4px;">${isExam ? `시험일 ${mYear}.10.31` : `학습 ${sd}일`}</span>
       </div>
       <div class="mo-body">
         <div class="mo-meta">하루 ${lpd}강 × ${ld}일(월~일) = 약 ${lec}강</div>`;
@@ -1491,13 +1676,16 @@ function buildDailyPlanData(p) {
   const n     = subjs.length;
 
   const moMap = {};
-  months.forEach(mo => { moMap[mo.m] = mo; });
+  months.forEach(mo => { moMap[`${mo.year}-${mo.m}`] = mo; });
 
-  const planStart = S.startDate;
+  // 2027 선행학습이 있으면 본학습 시작=Nov 1, 2026; 아니면 S.startDate
+  const PRE_END   = new Date(2026, 10, 1);
+  const is2027Pre = S.year === 2027 && S.startDate < PRE_END;
+  const planStart = is2027Pre ? PRE_END : S.startDate;
 
   const days = [];
-  const cur  = new Date(2026, planStart.getMonth(), 1);
-  const exam = new Date(2026, 9, 31);
+  const exam = getExamDate();
+  const cur  = new Date(planStart.getFullYear(), planStart.getMonth(), 1);
 
   // 1단계: 커리큘럼 레이블 부여 (과목은 미할당)
   while (cur <= exam) {
@@ -1508,7 +1696,7 @@ function buildDailyPlanData(p) {
       dayData.lecLabel = ''; dayData.method = '';
     } else {
       const lecDayInMonth = cur.getDate();
-      const mo = moMap[cur.getMonth() + 1];
+      const mo = moMap[`${cur.getFullYear()}-${cur.getMonth()+1}`];
       let lecLabel = '전 과정 복습';
       if (mo && mo.schedule && mo.ld > 0) {
         const pos = lecDayInMonth / mo.ld;
@@ -1561,7 +1749,8 @@ function buildDailyPlanData(p) {
 }
 
 /* ── 월별 학습계획표 HTML 렌더링 ── */
-function renderMonthTableHTML(monthNum, allDays) {
+function renderMonthTableHTML(monthNum, allDays, monthYear) {
+  const mYear = monthYear || S.year || 2026;
   const W  = 756;
   const LW = 42;
   const DW = Math.floor((W - LW) / 7); // 102px
@@ -1574,21 +1763,27 @@ function renderMonthTableHTML(monthNum, allDays) {
 
   // 월별 명언 (공부·노력·합격 키워드)
   const QUOTES = {
-    4:  '"천 리 길도 한 걸음부터 시작된다." — 노자',
-    5:  '"시작이 반이다." — 아리스토텔레스',
-    6:  '"포기하지 않는 것, 그것이 유일한 전략이다." — 명언',
-    7:  '"땀 흘린 만큼 반드시 결과가 온다." — 한국 명언',
-    8:  '"인내는 쓰다. 그러나 그 열매는 달다." — 루소',
-    9:  '"끝날 때까지 끝난 게 아니다." — 요기 베라',
-    10: '"지금 이 순간 포기하지 마라. 합격은 당신 것이다." — 수험생 응원',
+    1: '"새해, 새 출발! 합격의 첫 걸음을 내딛어요." — 수험생 응원',
+    2: '"꾸준함이 재능을 이긴다." — 명언',
+    3: '"봄처럼 새롭게, 열정으로 도전하라." — 명언',
+    4: '"천 리 길도 한 걸음부터 시작된다." — 노자',
+    5: '"시작이 반이다." — 아리스토텔레스',
+    6: '"포기하지 않는 것, 그것이 유일한 전략이다." — 명언',
+    7: '"땀 흘린 만큼 반드시 결과가 온다." — 한국 명언',
+    8: '"인내는 쓰다. 그러나 그 열매는 달다." — 루소',
+    9: '"끝날 때까지 끝난 게 아니다." — 요기 베라',
+    10:'"지금 이 순간 포기하지 마라. 합격은 당신 것이다." — 수험생 응원',
+    11:'"준비된 자만이 기회를 잡는다." — 명언',
+    12:'"올해의 노력이 내년의 합격이 된다." — 수험생 응원',
   };
 
-  const isExamDay = d => d && d.date.getFullYear()===2026 && d.date.getMonth()===9  && d.date.getDate()===31;
+  const examDate = getExamDate();
+  const isExamDay = d => d && d.date.getFullYear()===examDate.getFullYear() && d.date.getMonth()===9 && d.date.getDate()===31;
   const isAppDay  = d => d && d.date.getFullYear()===2026 && d.date.getMonth()===7  && d.date.getDate()>=3 && d.date.getDate()<=7;
   const todayMid  = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
   const isPast    = d => d && d.date < todayMid;
 
-  const monthDays = allDays.filter(d => d.date.getMonth() + 1 === monthNum);
+  const monthDays = allDays.filter(d => d.date.getFullYear()===mYear && d.date.getMonth()+1===monthNum);
   if (!monthDays.length) return '';
 
   const weeks = [];
@@ -1610,7 +1805,7 @@ function renderMonthTableHTML(monthNum, allDays) {
 
   let h = `<div style="font-family:${FF};width:${W}px;background:#fff;padding:12px 0 0;margin:0;box-sizing:border-box;">
     <div style="text-align:center;margin-bottom:8px;">
-      <div style="font-size:14px;font-weight:800;color:#1e293b;margin-bottom:3px;">2026년 제37회 ${tLbl}목표 ${monthNum}월 학습계획</div>
+      <div style="font-size:14px;font-weight:800;color:#1e293b;margin-bottom:3px;">${mYear}년 제${mYear===2026?'37':'38'}회 ${tLbl}목표 ${monthNum}월 학습계획</div>
       <div style="font-size:9px;color:#64748b;font-style:italic;">${quote}</div>
     </div>
     <table style="width:${W}px;border-collapse:collapse;table-layout:fixed;">
@@ -1641,7 +1836,7 @@ function renderMonthTableHTML(monthNum, allDays) {
     wk.forEach(d => {
       if (!d) { h += `<td style="${TD}background:#f1f5f9;"></td>`; return; }
       if (isExamDay(d)) {
-        h += `<td rowspan="2" style="${TD}background:#fef3c7;font-weight:700;color:#92400e;vertical-align:middle;font-size:8px;">🎯 제37회 시험일</td>`;
+        h += `<td rowspan="2" style="${TD}background:#fef3c7;font-weight:700;color:#92400e;vertical-align:middle;font-size:8px;">🎯 제${mYear===2026?'37':'38'}회 시험일</td>`;
         return;
       }
       const txt = isPast(d) ? '' : (d.subj ? (SUBJ_SHORT[d.subj]||d.subj) : '');
@@ -1790,9 +1985,9 @@ async function downloadPDF(btn) {
     // ── 3. 일일 학습계획표 (월별 페이지) ──
     btn.innerHTML = '⏳ 생성 중... (2/2)';
     const dailyData  = buildDailyPlanData(window._plan);
-    const planMonths = window._plan.months.map(m => m.m);
-    for (const mn of planMonths) {
-      const monthHTML = renderMonthTableHTML(mn, dailyData);
+    const planMonths = window._plan.months.map(m => ({ m: m.m, year: m.year }));
+    for (const { m: mn, year: mYear } of planMonths) {
+      const monthHTML = renderMonthTableHTML(mn, dailyData, mYear);
       if (!monthHTML) continue;
       const mDiv = document.createElement('div');
       mDiv.style.cssText = 'width:756px;background:#fff;margin:0;padding:0;display:inline-block;';
