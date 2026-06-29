@@ -1085,15 +1085,11 @@ function buildPlan() {
   const contentRatio = (effectiveTotal > 0 && effectiveTotal < totalCap) ? effectiveTotal / totalCap : 1;
   months.forEach(mo => { mo.contentLec = Math.max(1, Math.round(mo.lec * contentRatio)); });
 
-  // 2027: 모든 커리큘럼 즉시 사용 가능(0 <= 어떤 mo.m도 항상 false)
-  // 2026: CURR_OPEN 절대 월 숫자(1~12)를 mo.m과 직접 비교 (원래 로직)
-  const openMap = S.year === 2027
-    ? { 1:0,2:0,3:0,4:0,5:0,6:0,7:0 }
-    : CURR_OPEN;
-
+  // CURR_OPEN은 매년 동일한 강의 제작 일정 → 2026/2027 모두 같은 오픈 월 적용
+  // 크로스-이어(2027 목표 + 2026 시작): 2026 달은 openM=0(기초이론)만 수강 가능
   const seqActive = result
     .filter(c => c.status !== 'skipped').sort((a,b) => a.seq-b.seq)
-    .map(c => ({ seq:c.seq, name:c.name.replace(/<br>/g,''), remaining:c.effective, openM:openMap[c.seq]||0 }));
+    .map(c => ({ seq:c.seq, name:c.name.replace(/<br>/g,''), remaining:c.effective, openM:CURR_OPEN[c.seq]||0 }));
   let ci = 0;
   months.forEach(mo => {
     while (ci < seqActive.length && seqActive[ci].remaining <= 0) ci++;
@@ -1103,7 +1099,12 @@ function buildPlan() {
       if (ci >= seqActive.length) {
         sch.push({ name:'전 과정 최종 복습', pct:Math.round(cap/mo.contentLec*100), rev:true }); break;
       }
-      if (seqActive[ci].openM > mo.m) {
+      // 이전 연도 월(크로스-이어): openM=0인 과목만 수강 가능
+      // 시험 연도 월: CURR_OPEN 절대 월과 직접 비교
+      const notYetOpen = mo.year < examDate.getFullYear()
+        ? seqActive[ci].openM > 0
+        : seqActive[ci].openM > mo.m;
+      if (notYetOpen) {
         sch.push({ name:'부족한 과목 복습', pct:Math.round(cap/mo.contentLec*100), rev:true }); break;
       }
       const take = Math.min(seqActive[ci].remaining, cap);
